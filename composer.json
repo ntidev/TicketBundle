@@ -1,0 +1,33 @@
+{
+    "name": "nti/ticket-bundle",
+    "description": "A ticketing system symfony bundle.",
+    "type" : "symfony-bundle",
+    "authors": [
+        {
+            "name": "Enercido Alcantara",
+            "email": "ealcantara@syneteksolutions.com"
+        }
+    ],
+    "license" : [
+        "MIT"
+    ],
+    "keywords" : [
+        "TicketBundle", "Symfony", "Ticket", "Ticketing System", "NTI", "NTIDev"
+    ],
+    "autoload" : {
+        "psr-0" : {
+            "NTI\\TicketBundle" : ""
+        }
+    },
+    "target-dir" : "NTI/EmailBundle",
+    "require": {
+        "php": ">=7.0",
+        "symfony/symfony": "^2.8",
+        "doctrine/orm": "^2.4.8",
+        "doctrine/doctrine-bundle": "~1.4",
+        "symfony/monolog-bundle": "~2.4",
+        "jms/serializer-bundle": "1.5.0",
+        "garethp/http-playback":"~1.0",
+        "garethp/php-ews": "0.9.5"
+    }
+}

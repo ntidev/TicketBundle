@@ -1,0 +1,65 @@
+services:
+    # setting service
+    nti_ticket.settings:
+        class: NTI\TicketBundle\Service\SettingService
+
+    # setting repository service
+    nti_ticket.resource.repository:
+        class: NTI\TicketBundle\Repository\ResourceRepository
+        arguments: ["@doctrine.orm.entity_manager"]
+
+    # contact repository service
+    nti_ticket.contact.repository:
+        class: NTI\TicketBundle\Repository\ContactRepository
+        arguments: ["@doctrine.orm.entity_manager"]
+
+    # modules services
+
+    # board service
+    nti_ticket.board.service:
+        class: NTI\TicketBundle\Service\Board\BoardService
+        arguments: ["@service_container"]
+
+    # ticket status service
+    nti_ticket.status.service:
+        class: NTI\TicketBundle\Service\Ticket\StatusService
+        arguments: ["@service_container"]
+
+    # ticket type service
+    nti_ticket.type.service:
+        class: NTI\TicketBundle\Service\Ticket\TypeService
+        arguments: ["@service_container"]
+
+    # ticket source service
+    nti_ticket.source.service:
+        class: NTI\TicketBundle\Service\Ticket\SourceService
+        arguments: ["@service_container"]
+
+    # ticket service
+    nti_ticket.service:
+        class: NTI\TicketBundle\Service\Ticket\TicketService
+        arguments: ["@service_container"]
+
+    # ticket entries service
+    nti_ticket.entries.service:
+        class: NTI\TicketBundle\Service\Ticket\EntryService
+        arguments: ["@service_container"]
+
+    # ticket entries service
+    nti_ticket.document.service:
+        class: NTI\TicketBundle\Service\Ticket\DocumentService
+        arguments: ["@service_container"]
+
+    # ticket form service
+    nti_ticket.form.service:
+        class: NTI\TicketBundle\Form\Ticket\TicketType
+        arguments: ["@doctrine.orm.entity_manager"]
+        tags:
+        - { name: form.type }
+
+    # ticket form service
+    nti_ticket.form.email.service:
+        class: NTI\TicketBundle\Form\Ticket\TicketFromEmailType
+        arguments: ["@doctrine.orm.entity_manager"]
+        tags:
+        - { name: form.type }

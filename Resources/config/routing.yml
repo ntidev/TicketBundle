@@ -1,0 +1,4 @@
+nti_ticket_homepage:
+    resource: '@NTITicketBundle/Controller/'
+    prefix: /nti/tickets
+    type: annotation
