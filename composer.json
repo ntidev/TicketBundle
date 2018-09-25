@@ -19,7 +19,7 @@
             "NTI\\TicketBundle" : ""
         }
     },
-    "target-dir" : "NTI/EmailBundle",
+    "target-dir" : "NTI/TicketBundle",
     "require": {
         "php": ">=7.0",
         "symfony/symfony": "^2.8",
