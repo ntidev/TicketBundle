@@ -35,7 +35,7 @@ class Email
     /**
      * @return string
      */
-    public function getSubject(): string
+    public function getSubject()
     {
         return $this->subject;
     }
@@ -44,7 +44,7 @@ class Email
      * @param string $subject
      * @return Email
      */
-    public function setSubject(string $subject): Email
+    public function setSubject(string $subject)
     {
         $this->subject = $subject;
         return $this;
@@ -53,7 +53,7 @@ class Email
     /**
      * @return string
      */
-    public function getBody(): string
+    public function getBody()
     {
         return $this->body;
     }
@@ -62,7 +62,7 @@ class Email
      * @param string $body
      * @return Email
      */
-    public function setBody(string $body): Email
+    public function setBody(string $body)
     {
         $this->body = $body;
         return $this;
@@ -71,7 +71,7 @@ class Email
     /**
      * @return string
      */
-    public function getFrom(): string
+    public function getFrom()
     {
         return $this->from;
     }
@@ -80,7 +80,7 @@ class Email
      * @param string $from
      * @return Email
      */
-    public function setFrom(string $from): Email
+    public function setFrom(string $from)
     {
         $this->from = $from;
         return $this;
@@ -89,7 +89,7 @@ class Email
     /**
      * @return MessageType
      */
-    public function getMessage(): MessageType
+    public function getMessage()
     {
         return $this->message;
     }
@@ -98,7 +98,7 @@ class Email
      * @param MessageType $message
      * @return Email
      */
-    public function setMessage(MessageType $message): Email
+    public function setMessage(MessageType $message)
     {
         $this->message = $message;
         return $this;
@@ -107,7 +107,7 @@ class Email
     /**
      * @return string
      */
-    public function getMessageEncode(): string
+    public function getMessageEncode()
     {
         return $this->messageEncode;
     }
@@ -116,7 +116,7 @@ class Email
      * @param string $messageEncode
      * @return Email
      */
-    public function setMessageEncode(string $messageEncode): Email
+    public function setMessageEncode(string $messageEncode)
     {
         $this->messageEncode = $messageEncode;
         return $this;
