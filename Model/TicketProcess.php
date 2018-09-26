@@ -121,7 +121,7 @@ class TicketProcess
     /**
      * @return UserInterface
      */
-    public function getUser(): UserInterface
+    public function getUser()
     {
         return $this->user;
     }
@@ -175,7 +175,7 @@ class TicketProcess
     /**
      * @return array
      */
-    public function getErrors(): array
+    public function getErrors()
     {
         return $this->errors;
     }
@@ -193,7 +193,7 @@ class TicketProcess
     /**
      * @return int
      */
-    public function getResponseCode(): int
+    public function getResponseCode()
     {
         return $this->responseCode;
     }
