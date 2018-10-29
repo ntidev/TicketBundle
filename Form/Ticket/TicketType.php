@@ -47,7 +47,8 @@ class TicketType extends AbstractType
             ->add('source', TextType::class, array('required' => true, 'invalid_message' => 'Ticket source is not valid.'))
             ->add('status', TextType::class, array('required' => true, 'invalid_message' => 'Ticket status is not valid.'))
             ->add('type', TextType::class, array('required' => true, 'invalid_message' => 'Ticket type is not valid.'))
-            ->add('board', TextType::class, array('required' => true, 'invalid_message' => 'Ticket board is not valid.'));
+            ->add('board', TextType::class, array('required' => true, 'invalid_message' => 'Ticket board is not valid.'))
+            ->add('followers', TextType::class);
 
         // -- data transformers
         $builder->get('priority')->addModelTransformer(new PriorityTransformer($this->em, false));

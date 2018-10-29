@@ -4,13 +4,15 @@ namespace NTI\TicketBundle\Repository;
 
 use Doctrine\ORM\EntityManagerInterface;
 use NTI\TicketBundle\Service\SettingService;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class ContactRepository extends SettingService
 {
     private $em;
 
-    public function __construct(EntityManagerInterface $em)
+    public function __construct(EntityManagerInterface $em, ContainerInterface $container)
     {
+        parent::__construct($container);
         $this->em = $em;
     }
 

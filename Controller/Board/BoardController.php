@@ -25,7 +25,7 @@ class BoardController extends Controller
 {
 
     /**
-     * @Route("/", name="crm_tickets_boards", methods={"GET"}, options={"expose":true})
+     * @Route("/", name="nti_tickets_boards", methods={"GET"}, options={"expose":true})
      * @param Request $request
      * @return JsonResponse
      * @throws \NTI\TicketBundle\Exception\ProcessedBoardResourcesException

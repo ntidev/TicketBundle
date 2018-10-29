@@ -21,20 +21,7 @@ interface TicketProcessInterface
      * @param TicketProcess $process
      * @return TicketProcess
      */
-    public function afterCreateTicket(TicketProcess $process);
-
-    /**
-     * @param TicketProcess $process
-     * @return TicketProcess
-     */
     public function beforeUpdateTicket(TicketProcess $process);
-
-    /**
-     * @param TicketProcess $process
-     * @param array $unchanged
-     * @return TicketProcess
-     */
-    public function afterUpdateTicket(TicketProcess $process, array $unchanged);
 
     /**
      * @param TicketProcess $process
@@ -42,24 +29,6 @@ interface TicketProcessInterface
      */
     public function beforeCreateTicketEntry(TicketProcess $process);
 
-    /**
-     * @param TicketProcess $process
-     * @return TicketProcess
-     */
-    public function afterCreateTicketEntry(TicketProcess $process);
-
-    /**
-     * @param TicketProcess $process
-     * @return TicketProcess
-     */
-    public function beforeUpdateTicketEntry(TicketProcess $process);
-
-    /**
-     * @param TicketProcess $process
-     * @param array $unchanged
-     * @return TicketProcess
-     */
-    public function afterUpdateTicketEntry(TicketProcess $process, array $unchanged);
 
     /**
      * This method get call once a email connector has a new email to be processed. Here you can check the email information

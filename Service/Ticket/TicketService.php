@@ -6,8 +6,12 @@ namespace NTI\TicketBundle\Service\Ticket;
 use Doctrine\Common\Collections\ArrayCollection;
 use JMS\Serializer\SerializationContext;
 use NTI\TicketBundle\Entity\Configuration\Configuration;
+use NTI\TicketBundle\Entity\Ticket\Status;
 use NTI\TicketBundle\Entity\Ticket\Ticket;
 use NTI\TicketBundle\Entity\Ticket\TicketResource;
+use NTI\TicketBundle\Event\TicketClosedEvent;
+use NTI\TicketBundle\Event\TicketCreatedEvent;
+use NTI\TicketBundle\Event\TicketResourceChanged;
 use NTI\TicketBundle\Exception\DatabaseException;
 use NTI\TicketBundle\Exception\InvalidFormException;
 use NTI\TicketBundle\Exception\TicketProcessStoppedException;
@@ -16,7 +20,9 @@ use NTI\TicketBundle\Form\Ticket\TicketType;
 use NTI\TicketBundle\Model\Email;
 use NTI\TicketBundle\Model\TicketProcess;
 use NTI\TicketBundle\Service\SettingService;
+use function Sodium\add;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Form\Form;
 use Symfony\Component\Security\Core\User\UserInterface;
 
@@ -29,11 +35,14 @@ class TicketService extends SettingService
 
     private $em;
     private $container;
+    private $dispatcher;
 
     public function __construct(ContainerInterface $container)
     {
+        parent::__construct($container);
         $this->container = $container;
         $this->em = $container->get('doctrine')->getManager();
+        $this->dispatcher = $container->get('event_dispatcher');
     }
 
     /**
@@ -55,8 +64,7 @@ class TicketService extends SettingService
             $nextByTicket = ($lastTicket->getTicketNumber() + 1);
 
             if ($config)
-                $nextByConfig = (intval($config->getValue()) + 1);
-
+                $nextByConfig = intval($config->getValue());
 
             if ($nextByConfig > $nextByTicket)
                 return $nextByConfig;
@@ -65,9 +73,8 @@ class TicketService extends SettingService
 
         } else {
             // -- its the first ticket
-
             if ($config)
-                $nextByConfig = (intval($config->getValue()) + 1);
+                $nextByConfig = intval($config->getValue()) ;
 
             return $nextByConfig;
         }
@@ -202,13 +209,28 @@ class TicketService extends SettingService
         }
 
         /**
+         * Dispatching the created Ticket Event
+         */
+        try {
+            $event = new TicketCreatedEvent($ticket, $user);
+            $result = $this->dispatcher->dispatch(TicketCreatedEvent::TICKET_CREATED, $event);
+            if ($result->getRegisterNotification() == true){
+                $notification = $result->getNotification();
+                $this->em->persist($notification);
+                $this->em->flush();
+            }
+        }catch (\Exception $exception){
+            dd($exception);
+        }
+
+        /**
          * calling post ticket creation method
          */
-        $process->setTicket($ticket);
-        $process = $this->container->get($this->getServiceName())->afterCreateTicket($process);
-        if (!$process->isContinue()) {
-            throw new TicketProcessStoppedException($process);
-        }
+//        $process->setTicket($ticket);
+//        $process = $this->container->get($this->getServiceName())->afterCreateTicket($process);
+//        if (!$process->isContinue()) {
+//            throw new TicketProcessStoppedException($process);
+//        }
 
         return $ticket;
     }
@@ -266,12 +288,60 @@ class TicketService extends SettingService
         }
 
         /**
-         * calling post ticket update method
+         * Dispatching the Resources Modified Event
          */
-        $process = $this->container->get($this->getServiceName())->afterUpdateTicket($process, $unchanged);
-        if (!$process->isContinue()) {
-            throw new TicketProcessStoppedException($process);
+        try {
+            $current = array_key_exists('resources', $unchanged) ? $unchanged['resources'] : array();
+            $changes = array_key_exists('resources', $data) ? $data['resources'] : array();
+
+            $added = array_diff($changes, $current);
+            $removed = array_diff($current, $changes);
+            /**
+             * Trigger event only if ticket resources change
+             */
+            if (count($added) > 0 || count($removed) > 0) {
+                $event = new TicketResourceChanged($ticket, $user, $added, $removed);
+                $result = $this->dispatcher->dispatch(TicketResourceChanged::TICKET_RESOURCES_CHANGED, $event);
+                if ($result->getRegisterNotification() == true) {
+                    $notification = $result->getNotification();
+                    $this->em->persist($notification);
+                    $this->em->flush();
+                }
+            }
+        }catch (\Exception $exception){
+            dd($exception);
         }
+
+        /**
+         * Dispatching ticket closed event.
+         */
+        try {
+            if ($ticket->getStatus()->getForClosing() === true && array_key_exists('status', $unchanged)) {
+                if (array_key_exists('id', $unchanged['status']) && $ticket->getStatus()->getId() != $id = $unchanged['status']['id']) {
+                    /** @var Status $prevSts */
+                    $prevSts = $this->em->getRepository(Status::class)->find($id);
+                    if ($prevSts) {
+
+                        /**
+                         * dispatch event only if is not already closed
+                         */
+                        if ($prevSts->getForClosing() == false) {
+                            $event = new TicketClosedEvent($ticket, $user, $unchanged['status']);
+                            $result = $this->dispatcher->dispatch(TicketClosedEvent::TICKET_CLOSED, $event);
+                            if ($result->getRegisterNotification() == true) {
+                                $notification = $result->getNotification();
+                                $this->em->persist($notification);
+                                $this->em->flush();
+                            }
+                        }
+                    }
+                }
+            }
+        }catch (\Exception $exception){
+            dd($exception);
+        }
+
+
 
         return $ticket;
     }

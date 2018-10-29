@@ -25,26 +25,20 @@ class NTITicketExtension extends Extension
         $loader = new Loader\YamlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
         $loader->load('services.yml');
 
-        $settingServiceDefinition = $container->getDefinition( 'nti_ticket.settings');
-        $settingServiceDefinition->addMethodCall( 'setConfig', array($config));
+        // -- setting entities params
+        $container->setParameter("nti_ticket.entities.resource", $config["entities"]['resource']);
+        $container->setParameter("nti_ticket.entities.contact", $config["entities"]['contact']);
 
-        $resourceServiceDefinition = $container->getDefinition( 'nti_ticket.resource.repository');
-        $resourceServiceDefinition->addMethodCall( 'setConfig', array($config));
+        $container->setParameter("nti_ticket.instance.service", $config["ticket_service"]);
+        $container->setParameter("nti_ticket.documents.dir", $config["documents_directory"]);
 
-        $contactServiceDefinition = $container->getDefinition( 'nti_ticket.contact.repository');
-        $contactServiceDefinition->addMethodCall( 'setConfig', array($config));
-
-        $ticketServiceDefinition = $container->getDefinition( 'nti_ticket.service');
-        $ticketServiceDefinition->addMethodCall( 'setConfig', array($config));
-
-        $entryServiceDefinition = $container->getDefinition( 'nti_ticket.entries.service');
-        $entryServiceDefinition->addMethodCall( 'setConfig', array($config));
-
-        $documentServiceDefinition = $container->getDefinition( 'nti_ticket.document.service');
-        $documentServiceDefinition->addMethodCall( 'setConfig', array($config));
+        $container->setParameter("nti_ticket.documents.dir", $config["documents_directory"]);
 
         // -- setting email client
-        $container->setParameter("nti_ticket.email.client", $config["email_client"]);
-        $container->setParameter("nti_ticket.documents.dir", $config["documents_directory"]);
+        if (array_key_exists('email_connector', $config)){
+            $container->setParameter("nti_ticket.email.connector", array_replace_recursive($config["email_connector"], array('provided' => true)));
+        }else{
+            $container->setParameter("nti_ticket.email.connector", array('provided' => false));
+        }
     }
 }

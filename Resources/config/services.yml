@@ -2,18 +2,19 @@ services:
     # setting service
     nti_ticket.settings:
         class: NTI\TicketBundle\Service\SettingService
+        arguments: ["@service_container"]
 
     # setting repository service
     nti_ticket.resource.repository:
         class: NTI\TicketBundle\Repository\ResourceRepository
-        arguments: ["@doctrine.orm.entity_manager"]
+        arguments: ["@doctrine.orm.entity_manager", "@service_container"]
 
     # contact repository service
     nti_ticket.contact.repository:
         class: NTI\TicketBundle\Repository\ContactRepository
-        arguments: ["@doctrine.orm.entity_manager"]
+        arguments: ["@doctrine.orm.entity_manager", "@service_container"]
 
-    # modules services
+    # -- modules services
 
     # board service
     nti_ticket.board.service:
@@ -46,6 +47,11 @@ services:
         arguments: ["@service_container"]
 
     # ticket entries service
+    nti_ticket.notification.service:
+        class: NTI\TicketBundle\Service\Notification\NotificationService
+        arguments: ["@service_container"]
+
+    # ticket entries service
     nti_ticket.document.service:
         class: NTI\TicketBundle\Service\Ticket\DocumentService
         arguments: ["@service_container"]
@@ -63,3 +69,11 @@ services:
         arguments: ["@doctrine.orm.entity_manager"]
         tags:
         - { name: form.type }
+
+
+    # -- email connector services
+
+    # exchange service
+    nti_ticket.connector.exchange.service:
+        class: NTI\TicketBundle\Service\EmailConnector\ExchangeService
+        arguments: ["@service_container"]

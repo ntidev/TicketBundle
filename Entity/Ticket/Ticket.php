@@ -189,12 +189,27 @@ class Ticket
     private $resourcesProcessed = false;
 
     /**
+     * @var array
+     * @Serializer\Groups({"nti_ticket", "nti_ticket_internal"})
+     * @ORM\Column(name="followers", type="array", nullable=true)
+     */
+    private $followers;
+
+    /**
+     * @Serializer\Groups({"nti_ticket"})
+     * @var ArrayCollection
+     * @ORM\OneToMany(targetEntity="NTI\TicketBundle\Entity\Notification\Notification", mappedBy="ticket")
+     */
+    private $notifications;
+
+    /**
      * Ticket constructor.
      */
     public function __construct()
     {
         $this->entries = new ArrayCollection();
         $this->resources = new ArrayCollection();
+        $this->notifications = new ArrayCollection();
     }
 
 
@@ -710,5 +725,63 @@ class Ticket
     public function getNotifyCc()
     {
         return $this->notifyCc;
+    }
+
+    /**
+     * Set followers
+     *
+     * @param array $followers
+     *
+     * @return Ticket
+     */
+    public function setFollowers($followers)
+    {
+        $this->followers = $followers;
+
+        return $this;
+    }
+
+    /**
+     * Get followers
+     *
+     * @return array
+     */
+    public function getFollowers()
+    {
+        return $this->followers;
+    }
+
+    /**
+     * Add notification
+     *
+     * @param \NTI\TicketBundle\Entity\Notification\Notification $notification
+     *
+     * @return Ticket
+     */
+    public function addNotification(\NTI\TicketBundle\Entity\Notification\Notification $notification)
+    {
+        $this->notifications[] = $notification;
+
+        return $this;
+    }
+
+    /**
+     * Remove notification
+     *
+     * @param \NTI\TicketBundle\Entity\Notification\Notification $notification
+     */
+    public function removeNotification(\NTI\TicketBundle\Entity\Notification\Notification $notification)
+    {
+        $this->notifications->removeElement($notification);
+    }
+
+    /**
+     * Get notifications
+     *
+     * @return \Doctrine\Common\Collections\Collection
+     */
+    public function getNotifications()
+    {
+        return $this->notifications;
     }
 }

@@ -4,6 +4,7 @@ namespace NTI\TicketBundle\Entity\Ticket;
 
 use Doctrine\ORM\Mapping as ORM;
 use JMS\Serializer\Annotation as Serializer;
+use NTI\TicketBundle\Entity\Notification\Notification;
 use NTI\TicketBundle\Util\Utilities;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 
@@ -135,6 +136,13 @@ class Entry
      * @ORM\JoinColumn(name="ticket_id", referencedColumnName="id", nullable=false)
      */
     private $ticket;
+
+    /**
+     * @var Notification
+     * @Serializer\Groups({"nti_ticket_entries"})
+     * @ORM\OneToOne(targetEntity="NTI\TicketBundle\Entity\Notification\Notification", mappedBy="entry")
+     */
+    private $notification;
 
 
     /**
@@ -449,6 +457,30 @@ class Entry
     }
 
     /**
+     * Set notification
+     *
+     * @param \NTI\TicketBundle\Entity\Notification\Notification $notification
+     *
+     * @return Entry
+     */
+    public function setNotification(\NTI\TicketBundle\Entity\Notification\Notification $notification = null)
+    {
+        $this->notification = $notification;
+
+        return $this;
+    }
+
+    /**
+     * Get notification
+     *
+     * @return \NTI\TicketBundle\Entity\Notification\Notification
+     */
+    public function getNotification()
+    {
+        return $this->notification;
+    }
+
+    /**
      * Get source
      *
      * @return string
@@ -465,4 +497,7 @@ class Entry
     public function setContactManually($contact){
         $this->contact = $contact;
     }
+
+
+
 }

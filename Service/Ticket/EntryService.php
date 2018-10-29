@@ -2,10 +2,10 @@
 
 namespace NTI\TicketBundle\Service\Ticket;
 
-
 use JMS\Serializer\SerializationContext;
 use NTI\TicketBundle\Entity\Ticket\Entry;
 use NTI\TicketBundle\Entity\Ticket\Ticket;
+use NTI\TicketBundle\Event\TicketEntryAddedEvent;
 use NTI\TicketBundle\Exception\DatabaseException;
 use NTI\TicketBundle\Exception\InvalidFormException;
 use NTI\TicketBundle\Exception\TicketProcessStoppedException;
@@ -28,12 +28,15 @@ class EntryService extends SettingService
     private $em;
     private $container;
     private $serializer;
+    private $dispatcher;
 
     public function __construct(ContainerInterface $container)
     {
+        parent::__construct($container);
         $this->container = $container;
-        $this->em = $container->get('doctrine')->getManager();
-        $this->serializer = $container->get('jms_serializer');
+        $this->em = $this->getManager();
+        $this->serializer = $this->getSerializer();
+        $this->dispatcher = $container->get('event_dispatcher');
     }
 
     /**
@@ -122,11 +125,22 @@ class EntryService extends SettingService
         }
 
         if ($serialized){
+            // -- entry
             $contact = json_decode($this->container->get('jms_serializer')->serialize($contact, 'json', SerializationContext::create()->setSerializeNull(true)->setGroups($this::ENTRY_CONTACT_SERIALIZATION)), true);
             $resource = json_decode($this->container->get('jms_serializer')->serialize($resource, 'json', SerializationContext::create()->setSerializeNull(true)->setGroups($this::ENTRY_RESOURCES_SERIALIZATION)), true);
+
+            // -- notification
+            $notification = null;
+            if ($entry->getNotification()){
+                $notification = $this->container->get('nti_ticket.notification.service')->processNotification($entry->getNotification());
+            }
+
             $entry = json_decode($this->container->get('jms_serializer')->serialize($entry, 'json', SerializationContext::create()->setSerializeNull(true)->setGroups($this::ENTRY_BASE_SERIALIZATION)), true);
             $entry['contact'] = $contact;
             $entry['resource'] = $resource;
+            $entry['notification'] = $notification;
+
+
         }else{
             $entry->setResourceManually($resource);
             $entry->setContactManually($contact);
@@ -180,12 +194,18 @@ class EntryService extends SettingService
         }
 
         /**
-         * calling post ticket entry creation method
+         * Dispatching the created Ticket Event
          */
-        $process->setEntry($entry);
-        $process = $this->container->get($this->getServiceName())->afterCreateTicketEntry($process);
-        if (!$process->isContinue()) {
-            throw new TicketProcessStoppedException($process);
+        try {
+            $event = new TicketEntryAddedEvent($entry, $user);
+            $result = $this->dispatcher->dispatch(TicketEntryAddedEvent::TICKET_ENTRY_ADDED, $event);
+            if ($result->getRegisterNotification() == true){
+                $notification = $result->getNotification();
+                $this->em->persist($notification);
+                $this->em->flush();
+            }
+        }catch (\Exception $exception){
+            // todo :: improve this.
         }
 
         return $entry;
@@ -226,12 +246,18 @@ class EntryService extends SettingService
         }
 
         /**
-         * calling post ticket entry creation method
+         * Dispatching the created Ticket Event
          */
-        $process->setEntry($entry);
-        $process = $this->container->get($this->getServiceName())->afterCreateTicketEntry($process);
-        if (!$process->isContinue()) {
-            throw new TicketProcessStoppedException($process);
+        try {
+            $event = new TicketEntryAddedEvent($entry, null,$email,Entry::SOURCE_EMAIL_CONNECTOR);
+            $result = $this->dispatcher->dispatch(TicketEntryAddedEvent::TICKET_ENTRY_ADDED, $event);
+            if ($result->getRegisterNotification() == true){
+                $notification = $result->getNotification();
+                $this->em->persist($notification);
+                $this->em->flush();
+            }
+        }catch (\Exception $exception){
+            // todo :: improve this.
         }
 
         return $entry;

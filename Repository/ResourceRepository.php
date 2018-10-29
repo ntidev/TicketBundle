@@ -10,14 +10,15 @@ use NTI\TicketBundle\Entity\Ticket\Ticket;
 use NTI\TicketBundle\Exception\ProcessedBoardResourcesException;
 use NTI\TicketBundle\Exception\ProcessedTicketResourcesException;
 use NTI\TicketBundle\Service\SettingService;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class ResourceRepository extends SettingService
 {
     private $em;
 
-
-    public function __construct(EntityManagerInterface $em)
+    public function __construct(EntityManagerInterface $em, ContainerInterface $container)
     {
+        parent::__construct($container);
         $this->em = $em;
     }
 

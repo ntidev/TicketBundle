@@ -12,6 +12,9 @@ use garethp\ews\API\Type\MessageType;
 use garethp\ews\API\Type\SyncFolderItemsCreateOrUpdateType;
 use Monolog\Logger;
 use NTI\TicketBundle\Exception\DatabaseException;
+use NTI\TicketBundle\Exception\ExchangeConnectionFailedException;
+use NTI\TicketBundle\Exception\ExchangeInactiveConfigurationException;
+use NTI\TicketBundle\Exception\ExchangeServerInvalidException;
 use NTI\TicketBundle\Exception\InvalidFormException;
 use NTI\TicketBundle\Exception\TicketProcessStoppedException;
 use NTI\TicketBundle\Model\Email;
@@ -46,11 +49,6 @@ class SyncInboxCommand extends ContainerAwareCommand
     /** @var  Logger $logger */
     private $logger;
 
-    private $provider;
-    private $server;
-    private $account;
-    private $password;
-
     /** @var API $api */
     private $api;
 
@@ -73,26 +71,32 @@ class SyncInboxCommand extends ContainerAwareCommand
         $this->container = $this->getContainer();
         $this->logger = $this->container->get('logger');
 
-        // -- setting parameters
-        $params = $this->container->getParameter('nti_ticket.email.client');
-        $this->provider = array_key_exists('name', $params) ? $params['name'] : null;
-        $this->server = array_key_exists('server', $params) ? $params['server'] : null;
-        $this->account = array_key_exists('account', $params) ? $params['account'] : null;
-        $this->password = array_key_exists('password', $params) ? $params['password'] : null;
+        /**
+         * parameters validation and connection test.
+         */
+        try{
+            $this->container->get('nti_ticket.connector.exchange.service')->testConnection();
+        } catch (\Exception $exception){
+            if ($exception instanceof ExchangeServerInvalidException){
+                $this->logger->alert("NTI Ticket: {$exception->getMessage()}");
+            }elseif ($exception instanceof ExchangeConnectionFailedException){
+                $this->logger->alert("NTI Ticket: {$exception->getMessage()}");
+            }elseif ($exception instanceof ExchangeInactiveConfigurationException){
+                $this->logger->alert("NTI Ticket: {$exception->getMessage()}");
+            }else {
+                $this->logger->alert(self::ERROR_UNKNOWN, array('message' => $exception->getMessage()));
+            }
+            die;
+        }
 
-        // -- checking if the server is reachable
-        if (!$this->setConnection()) die;
+        $this->api = $this->container->get('nti_ticket.connector.exchange.service')->getConnection();
 
         /**
-         * Inbox directory and credentials validation.
+         * Inbox directory
          */
         try {
             $inboxId = $this->api->getFolderByDistinguishedId(DistinguishedFolderIdNameType::INBOX)->getFolderId();
         } catch (\Exception $exception) {
-            if ($exception instanceof UnauthorizedException || $exception->getCode() == 401) {
-                $this->logger->alert(self::ERROR_INVALID_CREDENTIALS);
-                die;
-            }
             // -- general error handler
             $this->logger->alert(self::ERROR_UNKNOWN, array('message' => $exception->getMessage()));
             die;
@@ -141,64 +145,7 @@ class SyncInboxCommand extends ContainerAwareCommand
         } while ($maxEntries > 0);
 
 
-        $output->writeln('OK.');
-
-    }
-
-
-    /**
-     * This method check if the server is reachable doing a curl request to the server uri.
-     * @return bool
-     */
-    private function validateServer()
-    {
-        if (!$this->server) {
-            $this->logger->alert(self::ERROR_SERVER_INVALID);
-            return false;
-        }
-
-        try {
-
-            $uri = self::URI_HTTPS . $this->server . self::URI_BODY;
-            $ch = curl_init($uri);
-            curl_setopt($ch, CURLOPT_FAILONERROR, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-            curl_exec($ch);
-            $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-
-            if ($statusCode == 0) {
-                $this->logger->alert(self::ERROR_SERVER_INVALID);
-                return false;
-            }
-
-            return true;
-        } catch (\Exception $exception) {
-            $this->logger->error($this::ERROR_SERVER_INVALID, array('message' => $exception->getMessage()));
-            return false;
-        }
-    }
-
-    private function setConnection()
-    {
-        # check if is a valid user
-        if (!$this->account) {
-            $this->logger->alert("NTI Ticket: No user account provided.");
-            return false;
-        }
-
-        if (!$this->password) {
-            $this->logger->alert("NTI Ticket: No user password provided.");
-            return false;
-        }
-
-        if (!$this->validateServer()) {
-            return false;
-        }
-
-        $this->api = API::withUsernameAndPassword($this->server, $this->account, $this->password);
-
-        return true;
+        $output->writeln('NTI Ticket: Synchronization completed.');
 
     }
 

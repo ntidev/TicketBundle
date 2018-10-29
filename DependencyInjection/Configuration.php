@@ -50,7 +50,7 @@ class Configuration implements ConfigurationInterface
                 ->end()
             ->end()
             ->children()
-                ->arrayNode('email_client')
+                ->arrayNode('email_connector')
                     ->children()
                         ->scalarNode('provider')->end()
                         ->scalarNode('server')->end()

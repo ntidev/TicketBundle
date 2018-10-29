@@ -27,9 +27,10 @@ class DocumentService extends SettingService
 
     public function __construct(ContainerInterface $container)
     {
+        parent::__construct($container);
         $this->container = $container;
-        $this->em = $container->get('doctrine')->getManager();
-        $this->serializer = $container->get('jms_serializer');
+        $this->em = $this->getManager();
+        $this->serializer = $this->getSerializer();
         $this->directory = $container->getParameter('nti_ticket.documents.dir');
     }
 
