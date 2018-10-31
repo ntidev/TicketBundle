@@ -5,6 +5,7 @@ namespace NTI\TicketBundle\Form\Board;
 use NTI\TicketBundle\Entity\Board\Board;
 use NTI\TicketBundle\Util\Utilities;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
@@ -22,6 +23,7 @@ class BoardType extends AbstractType
             ->add('description')
             ->add('isActive')
             ->add('notify')
+            ->add('eventResources', TextType::class)
         ;
     }
 

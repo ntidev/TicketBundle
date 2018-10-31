@@ -91,6 +91,15 @@ class Board
     private $resources;
 
     /**
+     * @var array
+     * @Serializer\SerializedName("eventResources")
+     * @Serializer\Groups({"nti_ticket_board"})
+     * @ORM\Column(name="event_resources", type="array", nullable=true)
+     */
+    private $eventResources;
+
+
+    /**
      * Indicates if the resources ArrayCollection was transformed to the Resource Entity.
      * @var bool
      */
@@ -101,6 +110,7 @@ class Board
     {
         $this->resources = new ArrayCollection();
         $this->resourcesProcessed = false;
+        $this->eventResources = array();
     }
 
 
@@ -286,5 +296,29 @@ class Board
     public function setResourcesManually(ArrayCollection $resources){
         $this->resources = $resources;
         $this->resourcesProcessed = true;
+    }
+
+    /**
+     * Set eventResources
+     *
+     * @param array $eventResources
+     *
+     * @return Board
+     */
+    public function setEventResources($eventResources)
+    {
+        $this->eventResources = $eventResources;
+
+        return $this;
+    }
+
+    /**
+     * Get eventResources
+     *
+     * @return array
+     */
+    public function getEventResources()
+    {
+        return $this->eventResources;
     }
 }

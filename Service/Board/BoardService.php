@@ -45,7 +45,8 @@ class BoardService
         /** @var Board $board */
         foreach ($boards as $board){
             $resources = $this->container->get('nti_ticket.resource.repository')->getResourcesByBoard($board);
-            $response[] = $this->processBoard($board, $resources, $serialize);
+            $eventResources = $this->container->get('nti_ticket.resource.repository')->getByUniqueIdCollection($board->getEventResources());
+            $response[] = $this->processBoard($board, $resources, $eventResources, $serialize);
         }
 
         return $response;
@@ -64,7 +65,8 @@ class BoardService
         $board = $this->em->getRepository(Board::class)->find($id);
         if ($board) {
             $resources = $this->container->get('nti_ticket.resource.repository')->getResourcesByBoard($board);
-            $board = $this->processBoard($board, $resources, $serialized);
+            $eventResources = $this->container->get('nti_ticket.resource.repository')->getByUniqueIdCollection($board->getEventResources());
+            $board = $this->processBoard($board, $resources, $eventResources, $serialized);
         }
         return $board;
     }
@@ -80,7 +82,8 @@ class BoardService
         $board = $this->em->getRepository(Board::class)->findOneBy(array('uniqueId'=>$uniqueId));
         if ($board) {
             $resources = $this->container->get('nti_ticket.resource.repository')->getResourcesByBoard($board);
-            $board = $this->processBoard($board, $resources, $serialized);
+            $eventResources = $this->container->get('nti_ticket.resource.repository')->getByUniqueIdCollection($board->getEventResources());
+            $board = $this->processBoard($board, $resources, $eventResources, $serialized);
         }
         return $board;
     }
@@ -88,14 +91,17 @@ class BoardService
     /**
      * @param Board $board
      * @param array $resources
+     * @param array $eventResources
      * @param bool $serialized
      * @return mixed|Board
      */
-    private function processBoard(Board $board, $resources = array(), $serialized = false){
+    private function processBoard(Board $board, $resources = array(), $eventResources = array(), $serialized = false){
         if ($serialized) {
             $resources = json_decode($this->container->get('jms_serializer')->serialize($resources, 'json', SerializationContext::create()->setGroups($this::BOARD_BASE_SERIALIZATION)), true);
+            $eventResources = json_decode($this->container->get('jms_serializer')->serialize($eventResources, 'json', SerializationContext::create()->setGroups($this::BOARD_BASE_SERIALIZATION)), true);
             $board = json_decode($this->container->get('jms_serializer')->serialize($board, 'json', SerializationContext::create()->setGroups($this::BOARD_BASE_SERIALIZATION)), true);
             $board['resources'] = $resources;
+            $board['eventResources'] = $eventResources;
         }else{
             $boardResources = new ArrayCollection();
             foreach ($resources as $resource){
@@ -138,7 +144,9 @@ class BoardService
 
         // handling response
         $resources = $this->container->get('nti_ticket.resource.repository')->getResourcesByBoard($board);
-        return $this->processBoard($board, $resources, $serialized);
+        $eventResources = $this->container->get('nti_ticket.resource.repository')->getByUniqueIdCollection($board->getEventResources());
+
+        return $this->processBoard($board, $resources, $eventResources, $serialized);
     }
 
 
@@ -171,7 +179,9 @@ class BoardService
 
         // handling response
         $resources = $this->container->get('nti_ticket.resource.repository')->getResourcesByBoard($board);
-        return $this->processBoard($board, $resources, $serialized);
+        $eventResources = $this->container->get('nti_ticket.resource.repository')->getByUniqueIdCollection($board->getEventResources());
+
+        return $this->processBoard($board, $resources, $eventResources, $serialized);
 
     }
 
