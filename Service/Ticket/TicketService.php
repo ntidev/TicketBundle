@@ -6,6 +6,7 @@ namespace NTI\TicketBundle\Service\Ticket;
 use Doctrine\Common\Collections\ArrayCollection;
 use JMS\Serializer\SerializationContext;
 use NTI\TicketBundle\Entity\Configuration\Configuration;
+use NTI\TicketBundle\Entity\Ticket\Entry;
 use NTI\TicketBundle\Entity\Ticket\Status;
 use NTI\TicketBundle\Entity\Ticket\Ticket;
 use NTI\TicketBundle\Entity\Ticket\TicketResource;
@@ -476,13 +477,28 @@ class TicketService extends SettingService
             throw new DatabaseException();
         }
 
+//        /**
+//         * calling post ticket creation method
+//         */
+//        $process->setTicket($ticket);
+//        $process = $this->container->get($this->getServiceName())->afterCreateTicket($process);
+//        if (!$process->isContinue()) {
+//            throw new TicketProcessStoppedException($process);
+//        }
+
         /**
-         * calling post ticket creation method
+         * Dispatching the created Ticket Event
          */
-        $process->setTicket($ticket);
-        $process = $this->container->get($this->getServiceName())->afterCreateTicket($process);
-        if (!$process->isContinue()) {
-            throw new TicketProcessStoppedException($process);
+        try {
+            $event = new TicketCreatedEvent($ticket, null,$email, Entry::SOURCE_EMAIL_CONNECTOR);
+            $result = $this->dispatcher->dispatch(TicketCreatedEvent::TICKET_CREATED, $event);
+            if ($result->getRegisterNotification() == true){
+                $notification = $result->getNotification();
+                $this->em->persist($notification);
+                $this->em->flush();
+            }
+        }catch (\Exception $exception){
+            dd($exception);
         }
 
         return $ticket;
