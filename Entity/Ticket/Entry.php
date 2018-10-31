@@ -144,6 +144,11 @@ class Entry
      */
     private $notification;
 
+    public function __construct()
+    {
+        $this->notifyCc = array();
+    }
+
 
     /**
      * Get id

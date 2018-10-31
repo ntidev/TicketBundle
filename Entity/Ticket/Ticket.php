@@ -210,6 +210,8 @@ class Ticket
         $this->entries = new ArrayCollection();
         $this->resources = new ArrayCollection();
         $this->notifications = new ArrayCollection();
+        $this->followers = array();
+        $this->notifyCc = array();
     }
 
 
