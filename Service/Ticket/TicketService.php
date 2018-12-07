@@ -221,17 +221,8 @@ class TicketService extends SettingService
                 $this->em->flush();
             }
         }catch (\Exception $exception){
-            dd($exception);
+            // what ever that happened here we assume that you simply do not want to track notifications.
         }
-
-        /**
-         * calling post ticket creation method
-         */
-//        $process->setTicket($ticket);
-//        $process = $this->container->get($this->getServiceName())->afterCreateTicket($process);
-//        if (!$process->isContinue()) {
-//            throw new TicketProcessStoppedException($process);
-//        }
 
         return $ticket;
     }
@@ -310,7 +301,7 @@ class TicketService extends SettingService
                 }
             }
         }catch (\Exception $exception){
-            dd($exception);
+            // what ever that happened here we assume that you simply do not want to track notifications.
         }
 
         /**
@@ -339,7 +330,7 @@ class TicketService extends SettingService
                 }
             }
         }catch (\Exception $exception){
-            dd($exception);
+            // what ever that happened here we assume that you simply do not want to track notifications.
         }
 
 
@@ -452,6 +443,7 @@ class TicketService extends SettingService
         $process->setData($data);
 
         $ticket = new Ticket();
+        $ticket->setIsUnread(true);
 
         /** @var Form $form */
         $form = $this->container->get('form.factory')->create(TicketFromEmailType::class, $ticket);

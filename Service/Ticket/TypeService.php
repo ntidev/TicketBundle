@@ -6,6 +6,7 @@ namespace NTI\TicketBundle\Service\Ticket;
 use Exception;
 use NTI\TicketBundle\Entity\Ticket\Type;
 use NTI\TicketBundle\Exception\DatabaseException;
+use NTI\TicketBundle\Exception\InternalItemModificationException;
 use NTI\TicketBundle\Exception\InvalidFormException;
 use NTI\TicketBundle\Form\Ticket\TypeType;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -63,10 +64,14 @@ class TypeService
      * @param string $formType
      * @return mixed|Type
      * @throws DatabaseException
+     * @throws InternalItemModificationException
      * @throws InvalidFormException
      */
     public function update(Type $type, $data = array(), $isPatch = false, $serialize = false, $formType = TypeType::class)
     {
+        if ($type->getIsInternal() == true)
+            throw new InternalItemModificationException();
+
         # -- form validation
         /** @var Form $form */
         $form = $this->container->get('form.factory')->create($formType, $type);

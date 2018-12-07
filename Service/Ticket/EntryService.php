@@ -218,7 +218,6 @@ class EntryService extends SettingService
      * @return Entry
      * @throws DatabaseException
      * @throws InvalidFormException
-     * @throws TicketProcessStoppedException
      */
     public function createFromEmail(Email $email, Ticket $ticket, $data = array()){
 
@@ -238,6 +237,7 @@ class EntryService extends SettingService
         if (!$form->isValid())
             throw new InvalidFormException($form);
         try {
+            $ticket->setIsUnread(true);
             $entry->setSource(Entry::SOURCE_EMAIL_CONNECTOR);
             $this->em->persist($entry);
             $this->em->flush();
@@ -257,7 +257,7 @@ class EntryService extends SettingService
                 $this->em->flush();
             }
         }catch (\Exception $exception){
-            // todo :: improve this.
+            // what ever that happened here we assume that you simply do not want to track notifications.
         }
 
         return $entry;

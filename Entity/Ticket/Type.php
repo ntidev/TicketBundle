@@ -65,6 +65,19 @@ class Type
      */
     private $isActive;
 
+    /**
+     * @var bool
+     * @Serializer\Groups({"nti_ticket"})
+     * @Serializer\SerializedName("isInternal")
+     * @ORM\Column(name="is_internal", type="boolean", options={"default": false})
+     */
+    private $isInternal;
+
+    public function __construct()
+    {
+        $this->isInternal = false;
+    }
+
 
     /**
      * Get id
@@ -170,5 +183,29 @@ class Type
     public function getIsActive()
     {
         return $this->isActive;
+    }
+
+    /**
+     * Set isInternal
+     *
+     * @param boolean $isInternal
+     *
+     * @return Type
+     */
+    public function setIsInternal($isInternal)
+    {
+        $this->isInternal = $isInternal;
+
+        return $this;
+    }
+
+    /**
+     * Get isInternal
+     *
+     * @return boolean
+     */
+    public function getIsInternal()
+    {
+        return $this->isInternal;
     }
 }

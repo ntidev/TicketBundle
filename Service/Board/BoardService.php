@@ -53,6 +53,11 @@ class BoardService
 
     }
 
+    public function getActiveListByResource(string $resourceId){
+        $list =  $this->em->getRepository(Board::class)->getBoardsByResource($resourceId);
+        return json_decode($this->container->get('jms_serializer')->serialize($list, 'json', SerializationContext::create()->setGroups($this::BOARD_LIST_SERIALIZATION)), true);
+    }
+
 
     /**
      * @param $id
@@ -86,6 +91,13 @@ class BoardService
             $board = $this->processBoard($board, $resources, $eventResources, $serialized);
         }
         return $board;
+    }
+
+    /**
+     * @return null|Board
+     */
+    public function getLandingBoard(){
+        return $this->em->getRepository(Board::class)->findOneBy(array('isLanding'=> true));
     }
 
     /**

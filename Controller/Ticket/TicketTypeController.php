@@ -5,6 +5,7 @@ namespace NTI\TicketBundle\Controller\Ticket;
 
 use NTI\TicketBundle\Entity\Ticket\Type;
 use NTI\TicketBundle\Exception\DatabaseException;
+use NTI\TicketBundle\Exception\InternalItemModificationException;
 use NTI\TicketBundle\Exception\InvalidFormException;
 use NTI\TicketBundle\Util\Rest\RestResponse;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
@@ -90,6 +91,8 @@ class TicketTypeController extends Controller
                 return new RestResponse(null,400,"Form Error.",$ex->getForm());
             }elseif ($ex instanceof DatabaseException){
                 return new RestResponse(null,500,"A database error occurred processing the ticket status, check the provided information and try again.");
+            } elseif ($ex instanceof InternalItemModificationException) {
+                return new RestResponse(null, 400, "Internal ticket type can not be modified.");
             }
             return new RestResponse(null,500,"A unknown error occurred processing the ticket status, check the provided information and try again.");
         }

@@ -2,6 +2,8 @@
 
 namespace NTI\TicketBundle\Repository\Board;
 
+use NTI\TicketBundle\Entity\Board\Board;
+
 /**
  * BoardRepository
  *
@@ -10,4 +12,21 @@ namespace NTI\TicketBundle\Repository\Board;
  */
 class BoardRepository extends \Doctrine\ORM\EntityRepository
 {
+    /**
+     * @param string $resourceId
+     * @return array
+     */
+    public function getBoardsByResource(string $resourceId){
+
+        $qb = $this->getEntityManager()->createQueryBuilder();
+        $qb->select('board')
+            ->from(Board::class, 'board')
+            ->leftJoin('board.resources', 'resource')
+            ->andWhere(
+                $qb->expr()->eq('board.isActive', true),
+                $qb->expr()->eq('resource.resource', $qb->expr()->literal($resourceId))
+            )->orderBy('board.name', 'asc');
+
+        return $qb->getQuery()->getResult();
+    }
 }

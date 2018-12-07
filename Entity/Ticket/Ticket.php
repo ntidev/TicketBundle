@@ -203,6 +203,14 @@ class Ticket
     private $notifications;
 
     /**
+     * @var bool
+     * @Serializer\Groups({"nti_ticket", "nti_ticket_internal"})
+     * @Serializer\SerializedName("isUnread")
+     * @ORM\Column(name="is_unread", type="boolean", options={"default": false})
+     */
+    private $isUnread;
+
+    /**
      * Ticket constructor.
      */
     public function __construct()
@@ -212,6 +220,7 @@ class Ticket
         $this->notifications = new ArrayCollection();
         $this->followers = array();
         $this->notifyCc = array();
+        $this->isUnread = true;
     }
 
 
@@ -785,5 +794,29 @@ class Ticket
     public function getNotifications()
     {
         return $this->notifications;
+    }
+
+    /**
+     * Set isUnread
+     *
+     * @param boolean $isUnread
+     *
+     * @return Ticket
+     */
+    public function setIsUnread($isUnread)
+    {
+        $this->isUnread = $isUnread;
+
+        return $this;
+    }
+
+    /**
+     * Get isUnread
+     *
+     * @return boolean
+     */
+    public function getIsUnread()
+    {
+        return $this->isUnread;
     }
 }

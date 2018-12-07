@@ -67,7 +67,7 @@ class Status
 
     /**
      * @var bool
-     *
+     * @Serializer\Groups({"nti_ticket"})
      * @Serializer\SerializedName("forClosing")
      * @ORM\Column(name="for_closing", type="boolean", options={"default": false})
      */

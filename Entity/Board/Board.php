@@ -76,6 +76,15 @@ class Board
      * @var bool
      *
      * @Serializer\Groups({"nti_ticket_board"})
+     * @Serializer\SerializedName("isLanding")
+     * @ORM\Column(name="is_landing", type="boolean", options={"default": false})
+     */
+    private $isLanding;
+
+    /**
+     * @var bool
+     *
+     * @Serializer\Groups({"nti_ticket_board"})
      * @ORM\Column(name="notify", type="boolean", options={"default": false})
      */
     private $notify;
@@ -111,6 +120,7 @@ class Board
         $this->resources = new ArrayCollection();
         $this->resourcesProcessed = false;
         $this->eventResources = array();
+        $this->isLanding = false;
     }
 
 
@@ -320,5 +330,29 @@ class Board
     public function getEventResources()
     {
         return $this->eventResources;
+    }
+
+    /**
+     * Set isLanding
+     *
+     * @param boolean $isLanding
+     *
+     * @return Board
+     */
+    public function setIsLanding($isLanding)
+    {
+        $this->isLanding = $isLanding;
+
+        return $this;
+    }
+
+    /**
+     * Get isLanding
+     *
+     * @return boolean
+     */
+    public function getIsLanding()
+    {
+        return $this->isLanding;
     }
 }
