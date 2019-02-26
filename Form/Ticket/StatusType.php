@@ -3,11 +3,8 @@
 namespace NTI\TicketBundle\Form\Ticket;
 
 use NTI\TicketBundle\Entity\Ticket\Status;
-use NTI\TicketBundle\Util\Utilities;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Component\Form\FormEvent;
-use Symfony\Component\Form\FormEvents;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class StatusType extends AbstractType
@@ -36,14 +33,6 @@ class StatusType extends AbstractType
             'csrf_protection' => false,
             'allow_extra_fields' => true
         ));
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getBlockPrefix()
-    {
-        return 'nti_ticketbundle_ticket_status';
     }
 
 

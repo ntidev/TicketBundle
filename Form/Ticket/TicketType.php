@@ -3,7 +3,6 @@
 namespace NTI\TicketBundle\Form\Ticket;
 
 use Doctrine\ORM\EntityManagerInterface;
-use NTI\TicketBundle\Entity\Configuration\Configuration;
 use NTI\TicketBundle\Entity\Ticket\Ticket;
 use NTI\TicketBundle\Form\DataTransformer\BoardTransformer;
 use NTI\TicketBundle\Form\DataTransformer\PriorityTransformer;
@@ -11,12 +10,10 @@ use NTI\TicketBundle\Form\DataTransformer\SourceTransformer;
 use NTI\TicketBundle\Form\DataTransformer\StatusTransformer;
 use NTI\TicketBundle\Form\DataTransformer\StringToDateTimeTransformer;
 use NTI\TicketBundle\Form\DataTransformer\TypeTransformer;
+use NTI\TicketBundle\Form\UnstructuredType;
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Component\Form\FormEvent;
-use Symfony\Component\Form\FormEvents;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class TicketType extends AbstractType
@@ -41,14 +38,14 @@ class TicketType extends AbstractType
             ->add('notifyContact')
             ->add('notifyResources')
             ->add('creationResource')
-            ->add('notifyCc', TextType::class)
             ->add('requiredBy', TextType::class, array('required' => true, 'invalid_message' => 'Ticket required by date is not valid.'))
-            ->add('priority',TextType::class)
-            ->add('source', TextType::class, array('required' => true, 'invalid_message' => 'Ticket source is not valid.'))
-            ->add('status', TextType::class, array('required' => true, 'invalid_message' => 'Ticket status is not valid.'))
-            ->add('type', TextType::class, array('required' => true, 'invalid_message' => 'Ticket type is not valid.'))
-            ->add('board', TextType::class, array('required' => true, 'invalid_message' => 'Ticket board is not valid.'))
-            ->add('followers', TextType::class);
+            ->add('notifyCc', UnstructuredType::class)
+            ->add('priority',UnstructuredType::class)
+            ->add('source', UnstructuredType::class, array('required' => true, 'invalid_message' => 'Ticket source is not valid.'))
+            ->add('status', UnstructuredType::class, array('required' => true, 'invalid_message' => 'Ticket status is not valid.'))
+            ->add('type', UnstructuredType::class, array('required' => true, 'invalid_message' => 'Ticket type is not valid.'))
+            ->add('board', UnstructuredType::class, array('required' => true, 'invalid_message' => 'Ticket board is not valid.'))
+            ->add('followers', UnstructuredType::class);
 
         // -- data transformers
         $builder->get('priority')->addModelTransformer(new PriorityTransformer($this->em, false));
@@ -65,18 +62,10 @@ class TicketType extends AbstractType
     public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefaults(array(
+            'data_class' => Ticket::class,
             'allow_extra_fields' => true,
-            'csrf_protection' => false,
-            'data_class' => Ticket::class
+            'csrf_protection' => false
         ));
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getBlockPrefix()
-    {
-        return 'nti_ticketbundle_ticket_ticket';
     }
 
 

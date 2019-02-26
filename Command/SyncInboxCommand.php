@@ -4,7 +4,6 @@ namespace NTI\TicketBundle\Command;
 
 use garethp\ews\API;
 use garethp\ews\API\Enumeration\BodyTypeResponseType;
-use garethp\ews\API\Exception\UnauthorizedException;
 use garethp\ews\API\Message\SyncFolderItemsResponseMessageType;
 use garethp\ews\API\Type\DistinguishedFolderIdNameType;
 use garethp\ews\API\Type\FolderIdType;
