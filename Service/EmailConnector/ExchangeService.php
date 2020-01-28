@@ -6,6 +6,7 @@ namespace NTI\TicketBundle\Service\EmailConnector;
 use Exception;
 use garethp\ews\API;
 use garethp\ews\API\Exception\UnauthorizedException;
+use NTI\TicketBundle\Entity\Board\Board;
 use NTI\TicketBundle\Entity\Configuration\Configuration;
 use NTI\TicketBundle\Exception\ExchangeConnectionFailedException;
 use NTI\TicketBundle\Exception\ExchangeInactiveConfigurationException;
@@ -31,26 +32,34 @@ class ExchangeService
     {
         $this->container = $container;
         $this->em = $container->get('doctrine')->getManager();
-        $this->setParams();
+        $this->loadDefaultParams();
     }
 
-
-    private function setParams(){
+    /**
+     * Load default valiues to init the exchange service connection
+     */
+    private function loadDefaultParams(){
         $active = $this->em->getRepository(Configuration::class)->findOneBy(array('name' => 'EXCHANGE_EMAIL_CONNECTOR'));
         $this->active =  ($active instanceof Configuration && !empty($active->getValue())) ? $active->getValue() : null;
 
-        $server = $this->em->getRepository(Configuration::class)->findOneBy(array('name' => 'EXCHANGE_EMAIL_CONNECTOR_SERVER'));
-        $this->server =  ($server instanceof Configuration && !empty($server->getValue())) ? $server->getValue() : null;
-
-        $account = $this->em->getRepository(Configuration::class)->findOneBy(array('name' => 'EXCHANGE_EMAIL_CONNECTOR_ACCOUNT'));
-        $this->account =  ($account instanceof Configuration && !empty($account->getValue())) ? $account->getValue() : null;
-
-        $password = $this->em->getRepository(Configuration::class)->findOneBy(array('name' => 'EXCHANGE_EMAIL_CONNECTOR_PASSWORD'));
-        $this->password =  ($password instanceof Configuration && !empty($password->getValue())) ? $password->getValue() : null;
+//        /* TODO: take this value from current account board */
+//        $server = $this->em->getRepository(Configuration::class)->findOneBy(array('name' => 'EXCHANGE_EMAIL_CONNECTOR_SERVER'));
+//        $this->server =  ($server instanceof Configuration && !empty($server->getValue())) ? $server->getValue() : null;
+//        /* TODO: take this value from current account board */
+//        $account = $this->em->getRepository(Configuration::class)->findOneBy(array('name' => 'EXCHANGE_EMAIL_CONNECTOR_ACCOUNT'));
+//        $this->account =  ($account instanceof Configuration && !empty($account->getValue())) ? $account->getValue() : null;
+//        /* TODO: take this value from current account board */
+//        $password = $this->em->getRepository(Configuration::class)->findOneBy(array('name' => 'EXCHANGE_EMAIL_CONNECTOR_PASSWORD'));
+//        $this->password =  ($password instanceof Configuration && !empty($password->getValue())) ? $password->getValue() : null;
     }
 
-    public function setConnection(){
-        $this->api = API::withUsernameAndPassword($this->server, $this->account, $this->password);
+    /**
+     * @param $server
+     * @param $account
+     * @param $password
+     */
+    public function setConnection($server, $account, $password){
+        $this->api = API::withUsernameAndPassword($server, $account, $password);
     }
 
     public function getConnection(){
@@ -60,17 +69,18 @@ class ExchangeService
 
     /**
      * This method check if the server is reachable doing a curl request to the server uri.
+     * @param string|null $server
      * @return bool
      * @throws ExchangeServerInvalidException
      */
-    public function validateServer()
+    public function validateServer(string $server = null)
     {
-        if (!$this->server)
+        if (!$server)
             throw new ExchangeServerInvalidException("Exchange server not configured.");
 
         try {
 
-            $uri = self::URI_HTTPS . $this->server . self::URI_BODY;
+            $uri = self::URI_HTTPS . $server . self::URI_BODY;
             $ch = curl_init($uri);
             curl_setopt($ch, CURLOPT_FAILONERROR, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, 10);
@@ -89,30 +99,33 @@ class ExchangeService
         }
     }
 
-
     /**
+     * @param Board $board
      * @return bool
      * @throws ExchangeConnectionFailedException
      * @throws ExchangeInactiveConfigurationException
      * @throws ExchangeServerInvalidException
      */
-    public function testConnection(){
+    public function testConnection(Board $board){
         // -- get parameters from the database
-        $this->setParams();
+      //  $this->setParams($board);
+        $server = $board->getEmailConnectorServer();
+        $account = $board->getEmailConnectorAccount();
+        $password = $board->getEmailConnectorPassword();
 
-        if (!$this->active || $this->active == 'false')
-            throw new ExchangeInactiveConfigurationException("The exchange configuration is disabled.");
+        if (!$board->getIsActive())
+            throw new ExchangeInactiveConfigurationException("The exchange configuration is disabled or this board status is inactivated.");
 
         // -- validate if the server is reachable
-        if ($this->validateServer()){
-            if (!$this->account)
+        if ($this->validateServer($server)){
+            if (!$account)
                 throw new ExchangeConnectionFailedException("Exchange account is required.");
 
-            if (!$this->password)
+            if (!$password)
                 throw new ExchangeServerInvalidException("Exchange password is required.");
 
             // -- create EWS client
-            $this->setConnection();
+            $this->setConnection($server, $account, $password);
 
             // -- simple request to validate credentials
             try {

@@ -21,6 +21,10 @@ class BoardType extends AbstractType
             ->add('isActive')
             ->add('notify')
             ->add('eventResources', UnstructuredType::class)
+            // Email Connector
+            ->add('emailConnectorServer')
+            ->add('emailConnectorAccount')
+            ->add('emailConnectorPassword')
         ;
     }
 
