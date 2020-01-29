@@ -133,6 +133,7 @@ class BoardService
      * @throws DatabaseException
      * @throws InvalidFormException
      * @throws \NTI\TicketBundle\Exception\ProcessedBoardResourcesException
+     * @throws Exception
      */
     public function create($data = array(), $serialized = false, $formType = BoardType::class)
     {
@@ -158,6 +159,13 @@ class BoardService
         $resources = $this->container->get('nti_ticket.resource.repository')->getResourcesByBoard($board);
         $eventResources = $this->container->get('nti_ticket.resource.repository')->getByUniqueIdCollection($board->getEventResources());
 
+        // Test Email Connector
+        try {
+            $this->testConnectionService($board);
+        } catch (\Exception $exception) {
+            throw $exception;
+        }
+
         return $this->processBoard($board, $resources, $eventResources, $serialized);
     }
 
@@ -172,6 +180,7 @@ class BoardService
      * @throws DatabaseException
      * @throws InvalidFormException
      * @throws \NTI\TicketBundle\Exception\ProcessedBoardResourcesException
+     * @throws Exception
      */
     public function update(Board $board, $data = array(), $isPatch = false, $serialized = false, $formType = BoardType::class){
         # -- form validation
@@ -193,8 +202,26 @@ class BoardService
         $resources = $this->container->get('nti_ticket.resource.repository')->getResourcesByBoard($board);
         $eventResources = $this->container->get('nti_ticket.resource.repository')->getByUniqueIdCollection($board->getEventResources());
 
+        // Test Email Connector
+        try {
+            $this->testConnectionService($board);
+        } catch (\Exception $exception) {
+            throw $exception;
+        }
         return $this->processBoard($board, $resources, $eventResources, $serialized);
 
+    }
+
+    /**
+     * parameters validation and connection test.
+     * @throws Exception
+     */
+    public function testConnectionService(Board $board) {
+        try{
+            $this->container->get('nti_ticket.connector.exchange.service')->testConnection($board);
+        } catch (\Exception $exception){
+            throw $exception;
+        }
     }
 
     /**

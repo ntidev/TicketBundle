@@ -108,7 +108,6 @@ class ConfigurationController extends Controller
     {
         $data = json_decode($request->getContent(), true);
         $current = $this->getDoctrine()->getRepository(Configuration::class)->findBy(array('section' => 'EXCHANGE_EMAIL_CONNECTOR'));
-
         /** @var Configuration $emailConfig */
         foreach ($current as $emailConfig) {
             $found = false;

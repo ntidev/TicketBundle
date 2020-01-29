@@ -6,6 +6,9 @@ namespace NTI\TicketBundle\Controller\Board;
 use JMS\Serializer\SerializationContext;
 use NTI\TicketBundle\Entity\Board\Board;
 use NTI\TicketBundle\Exception\DatabaseException;
+use NTI\TicketBundle\Exception\ExchangeConnectionFailedException;
+use NTI\TicketBundle\Exception\ExchangeInactiveConfigurationException;
+use NTI\TicketBundle\Exception\ExchangeServerInvalidException;
 use NTI\TicketBundle\Exception\InvalidFormException;
 use NTI\TicketBundle\Exception\ProcessedBoardResourcesException;
 use NTI\TicketBundle\Service\Board\BoardService;
@@ -67,7 +70,6 @@ class BoardController extends Controller
      */
     public function createAction(Request $request){
         $data = json_decode($request->getContent(), true);
-
         try {
             $result = $this->get('nti_ticket.board.service')->create($data,true);
             return new RestResponse($result,200,"The new board was successfully created.");
@@ -79,6 +81,15 @@ class BoardController extends Controller
             }elseif ($ex instanceof DatabaseException){
                 return new RestResponse(null,500,"A database error occurred processing the board, check the provided information and try again.");
             }
+            // Connector Exceptions
+            if ($ex instanceof ExchangeServerInvalidException){
+                return new RestResponse(null, 400, $ex->getMessage());
+            }elseif ($ex instanceof ExchangeConnectionFailedException){
+                return new RestResponse(null, 400, $ex->getMessage());
+            }elseif ($ex instanceof ExchangeInactiveConfigurationException){
+                return new RestResponse(null, 400, $ex->getMessage());
+            }
+
             return new RestResponse(null,500,"A unknown error occurred processing the board, check the provided information and try again.");
         }
     }
@@ -109,6 +120,16 @@ class BoardController extends Controller
             }elseif ($ex instanceof DatabaseException){
                 return new RestResponse(null,500,"A database error occurred processing the board, check the provided information and try again.");
             }
+
+            // Connector Exceptions
+            if ($ex instanceof ExchangeServerInvalidException){
+                return new RestResponse(null, 400, $ex->getMessage());
+            }elseif ($ex instanceof ExchangeConnectionFailedException){
+                return new RestResponse(null, 400, $ex->getMessage());
+            }elseif ($ex instanceof ExchangeInactiveConfigurationException){
+                return new RestResponse(null, 400, $ex->getMessage());
+            }
+
             return new RestResponse(null,500,"A unknown error occurred processing the board, check the provided information and try again.");
         }
     }

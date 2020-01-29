@@ -236,6 +236,7 @@ class EntryService extends SettingService
 
         if (!$form->isValid())
             throw new InvalidFormException($form);
+
         try {
             $ticket->setIsUnread(true);
             $entry->setSource(Entry::SOURCE_EMAIL_CONNECTOR);

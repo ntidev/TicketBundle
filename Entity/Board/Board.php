@@ -114,6 +114,33 @@ class Board
      */
     private $resourcesProcessed;
 
+    /* Email Connector */
+    /**
+     * @var string
+     *
+     * @Serializer\Groups({"nti_ticket_board"})
+     * @Serializer\SerializedName("emailConnectorServer")
+     * @ORM\Column(name="emailConnectorServer", type="string", length=255, nullable=true)
+     */
+    private $emailConnectorServer;
+
+    /**
+     * @var string
+     *
+     * @Serializer\Groups({"nti_ticket_board"})
+     * @Serializer\SerializedName("emailConnectorAccount")
+     * @ORM\Column(name="emailConnectorAccount", type="string", length=255, nullable=true)
+     */
+    private $emailConnectorAccount;
+
+    /**
+     * @var string
+     *
+     * @Serializer\Groups({"nti_ticket_board"})
+     * @Serializer\SerializedName("emailConnectorPassword")
+     * @ORM\Column(name="emailConnectorPassword", type="string", length=255, nullable=true)
+     */
+    private $emailConnectorPassword;
 
     public function __construct()
     {
@@ -354,5 +381,59 @@ class Board
     public function getIsLanding()
     {
         return $this->isLanding;
+    }
+
+    /**
+     * @return string
+     */
+    public function getEmailConnectorServer()
+    {
+        return $this->emailConnectorServer;
+    }
+
+    /**
+     * @param string $emailConnectorServer
+     * @return Board
+     */
+    public function setEmailConnectorServer(string $emailConnectorServer)
+    {
+        $this->emailConnectorServer = $emailConnectorServer;
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getEmailConnectorAccount()
+    {
+        return $this->emailConnectorAccount;
+    }
+
+    /**
+     * @param string $emailConnectorAccount
+     * @return Board
+     */
+    public function setEmailConnectorAccount(string $emailConnectorAccount)
+    {
+        $this->emailConnectorAccount = $emailConnectorAccount;
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getEmailConnectorPassword()
+    {
+        return $this->emailConnectorPassword;
+    }
+
+    /**
+     * @param string $emailConnectorPassword
+     * @return Board
+     */
+    public function setEmailConnectorPassword(string $emailConnectorPassword)
+    {
+        $this->emailConnectorPassword = $emailConnectorPassword;
+        return $this;
     }
 }
