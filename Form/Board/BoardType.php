@@ -3,12 +3,9 @@
 namespace NTI\TicketBundle\Form\Board;
 
 use NTI\TicketBundle\Entity\Board\Board;
-use NTI\TicketBundle\Util\Utilities;
+use NTI\TicketBundle\Form\UnstructuredType;
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Component\Form\FormEvent;
-use Symfony\Component\Form\FormEvents;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class BoardType extends AbstractType
@@ -23,7 +20,11 @@ class BoardType extends AbstractType
             ->add('description')
             ->add('isActive')
             ->add('notify')
-            ->add('eventResources', TextType::class)
+            ->add('eventResources', UnstructuredType::class)
+            // Email Connector
+            ->add('emailConnectorServer')
+            ->add('emailConnectorAccount')
+            ->add('emailConnectorPassword')
         ;
     }
 
@@ -38,14 +39,5 @@ class BoardType extends AbstractType
             'allow_extra_fields' => true
         ));
     }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getBlockPrefix()
-    {
-        return 'nti_ticketbundle_board_board';
-    }
-
 
 }
