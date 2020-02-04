@@ -2,6 +2,7 @@
 
 namespace NTI\TicketBundle\Event;
 
+use NTI\TicketBundle\Entity\Board\Board;
 use NTI\TicketBundle\Entity\Notification\Notification;
 use NTI\TicketBundle\Entity\Ticket\Entry;
 use NTI\TicketBundle\Entity\Ticket\Ticket;
@@ -19,6 +20,7 @@ class TicketCreatedEvent extends Event
     protected $user;
     protected $email;
     protected $source;
+    protected $board;
 
     private $register = false;
     private $notification;
@@ -31,12 +33,13 @@ class TicketCreatedEvent extends Event
      * @param Email|null $email
      * @param string $source
      */
-    public function __construct(Ticket $ticket, UserInterface $user = null, Email $email = null, $source = Entry::SOURCE_SYSTEM )
+    public function __construct(Ticket $ticket, UserInterface $user = null, Email $email = null, Board $board = null, $source = Entry::SOURCE_SYSTEM )
     {
         $this->ticket = $ticket;
         $this->user = $user;
         $this->email = $email;
         $this->source = $source;
+        $this->board = $board;
 
         $this->notification = new Notification();
         $this->notification->setUniqueId(Utilities::v4UUID());
@@ -94,4 +97,22 @@ class TicketCreatedEvent extends Event
     public function getNotification(){
         return $this->notification;
     }
+
+    /**
+     * @return Board
+     */
+    public function getBoard(): Board
+    {
+        return $this->board;
+    }
+
+    /**
+     * @param Board $board
+     */
+    public function setBoard(Board $board)
+    {
+        $this->board = $board;
+    }
+
+
 }

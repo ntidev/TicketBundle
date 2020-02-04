@@ -129,7 +129,6 @@ class BoardController extends Controller
             }elseif ($ex instanceof ExchangeInactiveConfigurationException){
                 return new RestResponse(null, 400, $ex->getMessage());
             }
-
             return new RestResponse(null,500,"A unknown error occurred processing the board, check the provided information and try again.");
         }
     }
