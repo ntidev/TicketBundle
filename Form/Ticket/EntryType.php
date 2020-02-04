@@ -3,8 +3,8 @@
 namespace NTI\TicketBundle\Form\Ticket;
 
 use NTI\TicketBundle\Entity\Ticket\Entry;
+use NTI\TicketBundle\Form\UnstructuredType;
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
@@ -25,7 +25,7 @@ class EntryType extends AbstractType
             ->add('isInternal')
             ->add('notifyContact')
             ->add('notifyResources')
-            ->add('notifyCc', TextType::class);
+            ->add('notifyCc', UnstructuredType::class);
     }
 
     /**
@@ -38,14 +38,6 @@ class EntryType extends AbstractType
             'csrf_protection' => false,
             'allow_extra_fields' => true
         ));
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getBlockPrefix()
-    {
-        return 'nti_ticketbundle_ticket_entry';
     }
 
 
