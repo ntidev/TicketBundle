@@ -214,7 +214,7 @@ class TicketService extends SettingService
          * Dispatching the created Ticket Event
          */
         try {
-            $event = new TicketCreatedEvent($ticket, $user);
+            $event = new TicketCreatedEvent($ticket, $user, null, $ticket->getBoard());
             $result = $this->dispatcher->dispatch(TicketCreatedEvent::TICKET_CREATED, $event);
             if ($result->getRegisterNotification() == true){
                 $notification = $result->getNotification();
@@ -484,7 +484,7 @@ class TicketService extends SettingService
          * Dispatching the created Ticket Event
          */
         try {
-            $event = new TicketCreatedEvent($ticket, null, $email, $board,Entry::SOURCE_EMAIL_CONNECTOR);
+            $event = new TicketCreatedEvent($ticket, null, $email, $board, Entry::SOURCE_EMAIL_CONNECTOR);
             $result = $this->dispatcher->dispatch(TicketCreatedEvent::TICKET_CREATED, $event);
             if ($result->getRegisterNotification() == true){
                 $notification = $result->getNotification();
