@@ -407,7 +407,7 @@ class TicketService extends SettingService
 
         // -- get action for the new email.
         $nextStep = $this->container->get($this->getServiceName())->newEmailFromEmailConnectorReceived($email);
-        if (is_array($nextStep)){
+        if (is_array($nextStep) && sizeof($nextStep) > 0) {
             $action = array_key_exists('action', $nextStep) ? $nextStep['action'] : null;
             $data = array_key_exists('data', $nextStep) ? $nextStep['data'] : null;
             $ticket = array_key_exists('ticket', $nextStep) ? $nextStep['ticket'] : null;
@@ -424,8 +424,10 @@ class TicketService extends SettingService
                     }
                     break;
             }
+            return true;
+        } else {
+            return false;
         }
-        return true;
     }
 
     /**
