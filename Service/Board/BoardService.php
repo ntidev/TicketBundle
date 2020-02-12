@@ -225,7 +225,7 @@ class BoardService
      */
     public function update(Board $board, $data = array(), $isPatch = false, $serialized = false, $formType = BoardType::class){
         /** @var Smtp $smtpConfiguration */
-        $smtpConfiguration = $this->em->getRepository(Smtp::class)->findOneBy(['user' => $board->getEmailConnectorAccount()]);
+        $smtpConfiguration = $this->em->getRepository(Smtp::class)->findOneBy(['user' => $data['emailConnectorAccount']]);
         # -- form validation
         /** @var Form $form */
         $form = $this->container->get('form.factory')->create($formType, $board);
@@ -238,7 +238,6 @@ class BoardService
         // handling response
         $resources = $this->container->get('nti_ticket.resource.repository')->getResourcesByBoard($board);
         $eventResources = $this->container->get('nti_ticket.resource.repository')->getByUniqueIdCollection($board->getEventResources());
-
         // If not exists SMTP Configuration
         if ($smtpConfiguration == null) {
             $smtpConfiguration = $this->em->getRepository(Smtp::class)->findOneBy([]);
@@ -295,7 +294,6 @@ class BoardService
         } catch (Exception $ex) {
             throw new DatabaseException();
         }
-
 
          // Test Email Connector
         try {
