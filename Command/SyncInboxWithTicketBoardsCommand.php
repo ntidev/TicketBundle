@@ -1,6 +1,6 @@
 <?php
 
-namespace AppBundle\Command\Ticketing;
+namespace NTI\TicketBundle\Command;
 
 use Doctrine\ORM\EntityManager;
 use garethp\ews\API;
