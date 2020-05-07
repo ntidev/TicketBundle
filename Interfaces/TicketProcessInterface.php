@@ -2,6 +2,7 @@
 
 namespace NTI\TicketBundle\Interfaces;
 
+use NTI\TicketBundle\Entity\Board\Board;
 use NTI\TicketBundle\Model\Email;
 use NTI\TicketBundle\Model\TicketProcess;
 
@@ -42,8 +43,9 @@ interface TicketProcessInterface
      * Example: array('action' => 'create_ticket', 'data' => [])
      *
      * @param Email $email
+     * @param Board $board
      * @return array
      */
-    public function newEmailFromEmailConnectorReceived(Email $email);
+    public function newEmailFromEmailConnectorReceived(Email $email, Board $board);
 
 }

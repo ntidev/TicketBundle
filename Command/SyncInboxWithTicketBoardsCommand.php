@@ -187,22 +187,23 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
      */
     private function sendEmailToProcess(MessageType $message, FolderIdType $processedId, Board $board)
     {
-        // full email
         /** @var MessageType $item */
         $item = $this->api->getItem($message->getItemId(), ['ItemShape' => array('IncludeMimeContent' => true, 'BodyType' => BodyTypeResponseType::TEXT)]);
-
-        $from = $item->getFrom()->getMailbox()->getEmailAddress();
-        $body = $item->getBody();
-        $subject = $item->getSubject();
-
-        $email = new Email();
-        $email->setFrom($from);
-        $email->setBody($body);
-        $email->setSubject($subject);
-        $email->setMessage($item);
         $start = (new \DateTime($item->getDateTimeSent()))->setTimezone(new \DateTimeZone(date_default_timezone_get()));
+
         if($start >= $this->minDate) {
             try {
+                // full email
+                $from = $item->getFrom()->getMailbox()->getEmailAddress();
+                $body = $item->getBody();
+                $subject = $item->getSubject();
+
+                $email = new Email();
+                $email->setFrom($from);
+                $email->setBody($body);
+                $email->setSubject($subject);
+                $email->setMessage($item);
+
                 $successResponse = $this->container->get('nti_ticket.service')->newEmailReceived($email, $board);
             } catch (\Exception $exception) {
                 if ($exception instanceof InvalidFormException) {

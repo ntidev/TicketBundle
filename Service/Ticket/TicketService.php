@@ -406,7 +406,7 @@ class TicketService extends SettingService
     public function newEmailReceived(Email $email, Board $board){
 
         // -- get action for the new email.
-        $nextStep = $this->container->get($this->getServiceName())->newEmailFromEmailConnectorReceived($email);
+        $nextStep = $this->container->get($this->getServiceName())->newEmailFromEmailConnectorReceived($email, $board);
         if (is_array($nextStep) && sizeof($nextStep) > 0) {
             $action = array_key_exists('action', $nextStep) ? $nextStep['action'] : null;
             $data = array_key_exists('data', $nextStep) ? $nextStep['data'] : null;
