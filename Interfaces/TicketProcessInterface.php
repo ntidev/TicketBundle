@@ -43,7 +43,6 @@ interface TicketProcessInterface
      * Example: array('action' => 'create_ticket', 'data' => [])
      *
      * @param Email $email
-     * @param Board $board
      * @return array
      */
     public function newEmailFromEmailConnectorReceived(Email $email, Board $board);

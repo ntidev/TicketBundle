@@ -2,6 +2,7 @@
 
 namespace NTI\TicketBundle\Command;
 
+use Doctrine\DBAL\Exception\NotNullConstraintViolationException;
 use Doctrine\ORM\EntityManager;
 use garethp\ews\API;
 use garethp\ews\API\Enumeration\BodyTypeResponseType;
@@ -12,6 +13,8 @@ use garethp\ews\API\Type\MessageType;
 use garethp\ews\API\Type\SyncFolderItemsCreateOrUpdateType;
 use Monolog\Logger;
 use NTI\TicketBundle\Entity\Board\Board;
+use NTI\TicketBundle\Entity\Ticket\Document;
+use NTI\TicketBundle\Entity\Ticket\Ticket;
 use NTI\TicketBundle\Exception\DatabaseException;
 use NTI\TicketBundle\Exception\ExchangeConnectionFailedException;
 use NTI\TicketBundle\Exception\ExchangeInactiveConfigurationException;
@@ -20,6 +23,7 @@ use NTI\TicketBundle\Exception\InvalidFormException;
 use NTI\TicketBundle\Exception\TicketProcessStoppedException;
 use NTI\TicketBundle\Model\Email;
 use NTI\TicketBundle\Util\Rest\RestResponse;
+use NTI\TicketBundle\Util\Utilities;
 use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -156,7 +160,7 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                     if ($created instanceof SyncFolderItemsCreateOrUpdateType) { # -- found just one item in the folder
                         if (null != $message = $created->getMessage()) {
                             # -- if message is null is not a email item type (can be calendar meeting response, request or something)
-                            $this->sendEmailToProcess($message, $processedId, $board);
+                            $this->sendEmailToProcess($message, $processedId, $board, $output);
 
                         }
                     } elseif (is_array($created)) { # -- found more than one item in the folder
@@ -166,7 +170,7 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                                 # -- if message is null is not a email item type (can be calendar meeting response, request or something)
                                 continue;
                             }
-                            $this->sendEmailToProcess($message, $processedId, $board);
+                            $this->sendEmailToProcess($message, $processedId, $board, $output);
                         }
                     }
 
@@ -185,7 +189,7 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
      * @param Board $board
      * @return bool
      */
-    private function sendEmailToProcess(MessageType $message, FolderIdType $processedId, Board $board)
+    private function sendEmailToProcess(MessageType $message, FolderIdType $processedId, Board $board, OutputInterface $output)
     {
         /** @var MessageType $item */
         $item = $this->api->getItem($message->getItemId(), ['ItemShape' => array('IncludeMimeContent' => true, 'BodyType' => BodyTypeResponseType::TEXT)]);
@@ -204,7 +208,7 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                 $email->setSubject($subject);
                 $email->setMessage($item);
 
-                $successResponse = $this->container->get('nti_ticket.service')->newEmailReceived($email, $board);
+                $ticket = $this->container->get('nti_ticket.service')->newEmailReceived($email, $board);
             } catch (\Exception $exception) {
                 if ($exception instanceof InvalidFormException) {
                     $this->logger->critical("NTI Tickets: Form errors.", RestResponse::getFormErrors($exception->getForm()));
@@ -224,7 +228,7 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
              * Moving email to the processed folder.
              */
             try {
-                if ($successResponse) {
+                if($ticket instanceof Ticket) {
                     $this->api->moveItem($message->getItemId(), $processedId);
                     $this->logger->debug('NTI Tickets: Email moved to processed folder.');
                 }
@@ -232,9 +236,86 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                 $this->logger->critical("NTI Tickets: Error moving the email to the processed folder:: ", $exception->getMessage());
                 return false;
             }
+
+            /**
+             * Create Document
+             */
+            if($ticket instanceof Ticket) {
+                # -- dependencies
+                $validFormats = Document::ALLOWED_FORMATS;
+                $directory = $this->container->getParameter('nti_ticket.documents.dir');
+                $path = $directory . "/" . $ticket->getId();
+
+                # -- Get posted information
+                $name = $start->format('Y-m-d') . "_" . ($item->getSubject() != null ? Utilities::normalizeString($item->getSubject()) : "No_Subject_Found") . ".eml";;
+                $fileName = $path . '/' . $name;
+                # -- filename config
+                $hash = sha1("1" . time() . $fileName);
+//                $fileName = $hash . "_" . $fileName;
+
+                // Prepare upload folder
+                if (!file_exists($path)) {
+                    if (!mkdir($path, 0777, true)) {
+                        $this->logger->critical("Unable to create or write in the upload directory provided.");
+                        throw new \Exception("Unable to create or write in the upload directory provided.");
+                    }
+                }
+
+                // Write the content to the file (replace if exists)
+                if (file_put_contents($fileName, base64_decode($item->getMimeContent()->_)) === false) { # -- could not create the file.
+                    $this->logger->critical("The EML file could not be created.");
+                    throw new \Exception("The EML file could not be created.");
+                    $output->writeln('The EML file could not be created');
+                    return false;
+                }
+
+                $size = filesize($path);
+
+                try {
+                    # -- adding document to the ticket
+                    $document = new Document();
+                    $document->setTicket($ticket);
+                    $document->setDirectory($ticket->getId());
+                    $document->setFileName($name);
+                    $document->setFormat("EML");
+                    $document->setHash($hash);
+                    $document->setName($name);
+                    $document->setPath($path);
+                    $document->setType("message/rfc822");
+                    $document->setSize($size);
+                    $document->setUploadDate(new \DateTime());
+                    $document->setResource("N/A");
+
+                    $this->em->persist($document);
+                    $this->em->flush();
+                } catch (NotNullConstraintViolationException $exception) {
+                    $this->rmdir_recursive($path, $output);
+                    $this->logger->critical("NTI Tickets: An error has occurred creating the document." . $exception->getMessage());
+                    throw new \Exception("NTI Tickets: An error has occurred creating the document." . $exception->getMessage());
+                } catch (Exception $exception) {
+                    $this->rmdir_recursive($path, $output);
+                    $this->logger->critical("NTI Tickets: An error has occurred creating the document." . $exception->getMessage());
+                    throw new \Exception("NTI Tickets: An error has occurred creating the document." . $exception->getMessage());
+                }
+            }
         }
 
         return true;
+    }
+
+    public function rmdir_recursive($path, $output)
+    {
+        dump("PATH " . $path . "\n");
+        foreach (scandir($path) as $file) {
+            if ('.' === $file || '..' === $file) continue;
+            if (is_dir("$path/$file")) $this->rmdir_recursive("$path/$file", $output);
+            else unlink("$path/$file");
+        }
+        if (rmdir($path)) {
+            $output->writeln("The directory was removed.");
+        } else {
+            $output->writeln("The directory couldn't be removed.");
+        };
     }
 
 }

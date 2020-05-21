@@ -25,6 +25,9 @@ use Symfony\Component\Validator\Constraints as Assert;
  */
 class Source
 {
+    const INVENTORY_REPORT = 'inventory-report';
+    const EMAIL_CONNECTOR = 'email-connector';
+
     /**
      * @var int
      * @Serializer\Groups({"nti_ticket", "nti_ticket_internal"})
