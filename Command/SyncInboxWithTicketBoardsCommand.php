@@ -15,6 +15,7 @@ use Monolog\Logger;
 use NTI\TicketBundle\Entity\Board\Board;
 use NTI\TicketBundle\Entity\Ticket\Document;
 use NTI\TicketBundle\Entity\Ticket\Ticket;
+use NTI\TicketBundle\Entity\Ticket\TicketResource;
 use NTI\TicketBundle\Exception\DatabaseException;
 use NTI\TicketBundle\Exception\ExchangeConnectionFailedException;
 use NTI\TicketBundle\Exception\ExchangeInactiveConfigurationException;
@@ -284,7 +285,7 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                     $document->setType("message/rfc822");
                     $document->setSize($size);
                     $document->setUploadDate(new \DateTime());
-                    $document->setResource("N/A");
+                    $document->setResource(TicketResource::EMAIL_RESOURCE);
 
                     $this->em->persist($document);
                     $this->em->flush();
