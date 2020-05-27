@@ -13,7 +13,7 @@ use JMS\Serializer\Annotation as Serializer;
  */
 class Document
 {
-    const ALLOWED_FORMATS = array('PDF', 'DOC', 'DOCX', 'XLS', 'XLSX', 'PPT', 'PPTX', 'TXT', 'RTF', 'IP', 'AR', 'JPG', 'JPEG', 'PNG', 'GIF', 'BMP');
+    const ALLOWED_FORMATS = array('PDF', 'DOC', 'DOCX', 'XLS', 'XLSX', 'PPT', 'PPTX', 'TXT', 'RTF', 'IP', 'AR', 'JPG', 'JPEG', 'PNG', 'GIF', 'BMP', 'EML');
 
     /**
      * @var int

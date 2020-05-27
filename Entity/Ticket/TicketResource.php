@@ -16,6 +16,8 @@ use JMS\Serializer\Annotation as Serializer;
  */
 class TicketResource
 {
+    const EMAIL_RESOURCE = "FROM_EMAIL";
+
     /**
      * @var int
      *

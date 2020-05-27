@@ -415,7 +415,7 @@ class TicketService extends SettingService
             switch ($action){
                 case 'create_ticket':
                     if ($data){
-                        $this->createFromEmail($email, $data, $board);
+                        $ticket = $this->createFromEmail($email, $data, $board);
                     }
                     break;
                 case 'create_entry':
@@ -424,7 +424,7 @@ class TicketService extends SettingService
                     }
                     break;
             }
-            return true;
+            return $ticket;
         } else {
             return false;
         }
@@ -495,7 +495,7 @@ class TicketService extends SettingService
             }
         }catch (\Exception $exception){
             print_r($exception->getMessage());
-//            dd($exception);
+            return false;
         }
 
         return $ticket;
