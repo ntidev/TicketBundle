@@ -114,7 +114,7 @@ class BoardController extends Controller
             return new RestResponse($result,200,"Board changes successfully saved.");
         } catch (\Exception $ex) {
             if ($ex instanceof InvalidFormException){
-                return new RestResponse(null,400,"Form Error.",$ex->getForm());
+                return new RestResponse(null,400,"Form Error: ", $ex->getForm());
             }elseif ($ex instanceof ProcessedBoardResourcesException){
                 return new RestResponse(null,400,"The resources provided could not be processed.");
             }elseif ($ex instanceof DatabaseException){
@@ -123,11 +123,11 @@ class BoardController extends Controller
 
             // Connector Exceptions
             if ($ex instanceof ExchangeServerInvalidException){
-                return new RestResponse(null, 400, $ex->getMessage());
+                return new RestResponse(null, 400, "Board changes successfully saved, but the Exchange server could not be configured.");
             }elseif ($ex instanceof ExchangeConnectionFailedException){
-                return new RestResponse(null, 400, $ex->getMessage());
+                return new RestResponse(null, 400, "Board changes successfully saved, but the Exchange server could not be configured.");
             }elseif ($ex instanceof ExchangeInactiveConfigurationException){
-                return new RestResponse(null, 400, $ex->getMessage());
+                return new RestResponse(null, 400, "Board changes successfully saved, but the Exchange server could not be configured.");
             }
             return new RestResponse(null,500,"A unknown error occurred processing the board, check the provided information and try again.");
         }

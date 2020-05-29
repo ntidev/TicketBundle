@@ -109,9 +109,9 @@ class ExchangeService
     public function testConnection(Board $board){
         // -- get parameters from the database
       //  $this->setParams($board);
-        $server = $board->getEmailConnectorServer();
-        $account = $board->getEmailConnectorAccount();
-        $password = $board->getEmailConnectorPassword();
+        $server = $board->getConnectorServer();
+        $account = $board->getConnectorAccount();
+        $password = $board->getconnectorPassword();
 
         if (!$board->getIsActive())
             throw new ExchangeInactiveConfigurationException("The exchange configuration is disabled or this board status is inactivated.");

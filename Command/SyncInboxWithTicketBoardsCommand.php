@@ -95,7 +95,7 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
 
         foreach ($boards as $board) {
 
-            if ($board->getEmailConnectorServer() != null && $board->getEmailConnectorAccount() != null && $board->getEmailConnectorPassword()) {
+            if ($board->getConnectorServer() != null && $board->getConnectorAccount() != null && $board->getConnectorPassword()) {
                 /**
                  * parameters validation and connection test.
                  */
@@ -103,11 +103,11 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                     $this->container->get('nti_ticket.connector.exchange.service')->testConnection($board);
                 } catch (\Exception $exception) {
                     if ($exception instanceof ExchangeServerInvalidException) {
-                        $this->logger->alert("NTI Ticket: {$exception->getMessage()}" . $board->getEmailConnectorAccount());
+                        $this->logger->alert("NTI Ticket: {$exception->getMessage()}" . $board->getConnectorAccount());
                     } elseif ($exception instanceof ExchangeConnectionFailedException) {
-                        $this->logger->alert("NTI Ticket: {$exception->getMessage()}" . $board->getEmailConnectorAccount());
+                        $this->logger->alert("NTI Ticket: {$exception->getMessage()}" . $board->getConnectorAccount());
                     } elseif ($exception instanceof ExchangeInactiveConfigurationException) {
-                        $this->logger->alert("NTI Ticket: {$exception->getMessage()}" . $board->getEmailConnectorAccount());
+                        $this->logger->alert("NTI Ticket: {$exception->getMessage()}" . $board->getConnectorAccount());
                     } else {
                         $this->logger->alert(self::ERROR_UNKNOWN, array('message' => $exception->getMessage()));
                     }
@@ -115,7 +115,7 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                 }
 
                 $this->api = $this->container->get('nti_ticket.connector.exchange.service')->getConnection();
-                $this->logger->alert("NTI Ticket: {$board->getEmailConnectorAccount()}");
+                $this->logger->alert("NTI Ticket: {$board->getConnectorAccount()}");
 
                 /**
                  * Inbox directory
@@ -135,7 +135,7 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                  */
                 $processedDir = $this->api->getFolderByDisplayName('processed', $inboxId);
                 if (!$processedDir) {
-                    $this->logger->error('NTI Ticket: No inbox processed directory found. ' . $board->getEmailConnectorAccount());
+                    $this->logger->error('NTI Ticket: No inbox processed directory found. ' . $board->getConnectorAccount());
                     continue;
                 }
 

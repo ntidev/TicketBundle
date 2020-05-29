@@ -27,15 +27,12 @@ class BoardService
     /** @var EntityManagerInterface $em */
     private $em;
     private $container;
-    private $ORGANIZATION_DOMAIN;
     private $APP_PATH_SPOOL;
 
     public function __construct(ContainerInterface $container)
     {
         $this->container = $container;
         $this->em = $container->get('doctrine')->getManager();
-
-        $this->ORGANIZATION_DOMAIN = $this->container->getParameter('app.email.organization_domain');
         $this->APP_PATH_SPOOL = $this->container->getParameter('app.path.spool');
     }
 
@@ -177,16 +174,16 @@ class BoardService
 
         $formTypeSmtp = SmtpType::class;
         $dataSmtp = [
-            'host' => $board->getEmailConnectorServer(),
+            'host' => $board->getConnectorServer(),
             'port' => $smtpConfiguration->getPort(),
             'encryption' => $smtpConfiguration->getEncryption(),
-            'user' => $board->getEmailConnectorAccount(),
-            'password' => $board->getEmailConnectorPassword(),
+            'user' => $board->getConnectorAccount(),
+            'password' => $board->getConnectorPassword(),
         ];
 
         $smtp = new Smtp();
-        $smtp->setUniqueId($board->getEmailConnectorAccount() . $this->ORGANIZATION_DOMAIN);
-        $smtp->setSpoolDir($this->APP_PATH_SPOOL . $board->getEmailConnectorAccount());
+        $smtp->setUniqueId($board->getConnectorAccount());
+        $smtp->setSpoolDir($this->APP_PATH_SPOOL . $board->getConnectorAccount());
 
         /** @var Form $formSmtp */
         $formSmtp = $this->container->get('form.factory')->create($formTypeSmtp, $smtp);
@@ -224,8 +221,13 @@ class BoardService
      * @throws Exception
      */
     public function update(Board $board, $data = array(), $isPatch = false, $serialized = false, $formType = BoardType::class){
-        /** @var Smtp $smtpConfiguration */
-        $smtpConfiguration = $this->em->getRepository(Smtp::class)->findOneBy(['user' => $data['emailConnectorAccount']]);
+        // Validate Password
+        if(!array_key_exists("connectorPassword", $data)) {
+            $data["connectorPassword"] = $board->getConnectorPassword();
+        }
+        if(array_key_exists("connectorPassword", $data) && ($data["connectorPassword"] === null || $data["connectorPassword"] === '')) {
+            $data["connectorPassword"] = $board->getConnectorPassword();
+        }
         # -- form validation
         /** @var Form $form */
         $form = $this->container->get('form.factory')->create($formType, $board);
@@ -238,61 +240,47 @@ class BoardService
         // handling response
         $resources = $this->container->get('nti_ticket.resource.repository')->getResourcesByBoard($board);
         $eventResources = $this->container->get('nti_ticket.resource.repository')->getByUniqueIdCollection($board->getEventResources());
-        // If not exists SMTP Configuration
-        if ($smtpConfiguration == null) {
-            $smtpConfiguration = $this->em->getRepository(Smtp::class)->findOneBy([]);
-            // Form for SMTP Configuration.
-            $formTypeSmtp = SmtpType::class;
-            $dataSmtp = [
-                'host' => $board->getEmailConnectorServer(),
-                'port' => $smtpConfiguration->getPort(),
-                'encryption' => $smtpConfiguration->getEncryption(),
-                'user' => $board->getEmailConnectorAccount(),
-                'password' => $board->getEmailConnectorPassword(),
-            ];
-
-            $smtp = new Smtp();
-            $smtp->setUniqueId($board->getEmailConnectorAccount() . $this->ORGANIZATION_DOMAIN);
-            $smtp->setSpoolDir($this->APP_PATH_SPOOL . $board->getEmailConnectorAccount());
-
-            /** @var Form $formSmtp */
-            $formSmtp = $this->container->get('form.factory')->create($formTypeSmtp, $smtp);
-            $formSmtp->submit($dataSmtp);
-            if (!$formSmtp->isValid()) {
-                throw new InvalidFormException($form);
-            }
-
-            try {
-                $this->em->persist($smtp);
-            } catch (Exception $ex) {
-                throw new DatabaseException();
-            }
-        } else {
-            // If exists SMTP Configuration.
-            $formTypeSmtp = SmtpType::class;
-            $dataSmtp = [
-                'host' => $board->getEmailConnectorServer(),
-                'port' => $smtpConfiguration->getPort(),
-                'encryption' => $smtpConfiguration->getEncryption(),
-                'user' => $board->getEmailConnectorAccount(),
-                'password' => $board->getEmailConnectorPassword(),
-            ];
-
-            $smtpConfiguration->setUniqueId($board->getEmailConnectorAccount() . $this->ORGANIZATION_DOMAIN);
-            $smtpConfiguration->setSpoolDir($this->APP_PATH_SPOOL . $board->getEmailConnectorAccount());
-
-            /** @var Form $formSmtp */
-            $formSmtp = $this->container->get('form.factory')->create($formTypeSmtp, $smtpConfiguration);
-            $formSmtp->submit($dataSmtp);
-            if (!$formSmtp->isValid()) {
-                throw new InvalidFormException($form);
-            }
-        }
 
         try {
+            // Save board
             $this->em->flush();
         } catch (Exception $ex) {
             throw new DatabaseException();
+        }
+
+        /** @var Smtp $smtpConfiguration */
+        $smtpConfiguration = null;
+        if($board->getConnectorAccount()) {
+            $smtpConfiguration = $this->em->getRepository(Smtp::class)->findOneBy(['uniqueId' => $board->getConnectorAccount()]);
+
+            // If not exists SMTP Configuration
+            if ($smtpConfiguration !== null) {
+                // If exists SMTP Configuration.
+                $formTypeSmtp = SmtpType::class;
+                $dataSmtp = [
+                    'host' => $board->getConnectorServer(),
+                    'port' => $smtpConfiguration->getPort(),
+                    'encryption' => $smtpConfiguration->getEncryption(),
+                    'user' => $board->getConnectorAccount(),
+                    'password' => $board->getConnectorPassword(),
+                ];
+
+                $smtpConfiguration->setUniqueId($board->getConnectorAccount());
+                $smtpConfiguration->setSpoolDir($this->APP_PATH_SPOOL . $board->getConnectorAccount());
+
+                /** @var Form $formSmtp */
+                $formSmtp = $this->container->get('form.factory')->create($formTypeSmtp, $smtpConfiguration);
+                $formSmtp->submit($dataSmtp);
+                if (!$formSmtp->isValid()) {
+                    throw new InvalidFormException($form);
+                }
+                try {
+                    // Save smtp configuration
+                    $this->em->flush();
+                } catch (Exception $ex) {
+                    throw new DatabaseException();
+                }
+            }
         }
 
          // Test Email Connector
@@ -303,7 +291,6 @@ class BoardService
         }
 
         return $this->processBoard($board, $resources, $eventResources, $serialized);
-
     }
 
     /**
