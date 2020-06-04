@@ -12,6 +12,7 @@ use NTI\EmailBundle\Entity\Smtp;
 use NTI\EmailBundle\Form\SmtpType;
 use NTI\TicketBundle\Entity\Board\Board;
 use NTI\TicketBundle\Entity\Board\BoardResource;
+use NTI\TicketBundle\Event\TicketBoardCreatedEvent;
 use NTI\TicketBundle\Exception\DatabaseException;
 use NTI\TicketBundle\Exception\InvalidFormException;
 use NTI\TicketBundle\Form\Board\BoardType;
@@ -27,16 +28,15 @@ class BoardService
     /** @var EntityManagerInterface $em */
     private $em;
     private $container;
-    private $ORGANIZATION_DOMAIN;
     private $APP_PATH_SPOOL;
+    private $dispatcher;
 
     public function __construct(ContainerInterface $container)
     {
         $this->container = $container;
         $this->em = $container->get('doctrine')->getManager();
-
-        $this->ORGANIZATION_DOMAIN = $this->container->getParameter('app.email.organization_domain');
         $this->APP_PATH_SPOOL = $this->container->getParameter('app.path.spool');
+        $this->dispatcher = $container->get('event_dispatcher');
     }
 
     /**
@@ -168,36 +168,14 @@ class BoardService
         $resources = $this->container->get('nti_ticket.resource.repository')->getResourcesByBoard($board);
         $eventResources = $this->container->get('nti_ticket.resource.repository')->getByUniqueIdCollection($board->getEventResources());
 
-        /** @var Smtp $smtpConfiguration */
-        $smtpConfiguration = $this->em->getRepository(Smtp::class)->findOneBy([]);
-
-        if (!$smtpConfiguration) {
-            throw new RuntimeException("SMTP does not exists");
-        }
-
-        $formTypeSmtp = SmtpType::class;
-        $dataSmtp = [
-            'host' => $board->getEmailConnectorServer(),
-            'port' => $smtpConfiguration->getPort(),
-            'encryption' => $smtpConfiguration->getEncryption(),
-            'user' => $board->getEmailConnectorAccount(),
-            'password' => $board->getEmailConnectorPassword(),
-        ];
-
-        $smtp = new Smtp();
-        $smtp->setUniqueId($board->getEmailConnectorAccount() . $this->ORGANIZATION_DOMAIN);
-        $smtp->setSpoolDir($this->APP_PATH_SPOOL . $board->getEmailConnectorAccount());
-
-        /** @var Form $formSmtp */
-        $formSmtp = $this->container->get('form.factory')->create($formTypeSmtp, $smtp);
-        $formSmtp->submit($dataSmtp);
-        if (!$formSmtp->isValid()) throw new InvalidFormException($formSmtp);
-
+        /**
+         * Dispatching the created Ticket Event
+         */
         try {
-            $this->em->persist($smtp);
-            $this->em->flush();
-        } catch (Exception $ex) {
-            throw new DatabaseException();
+            $event = new TicketBoardCreatedEvent($board);
+            $result = $this->dispatcher->dispatch(TicketBoardCreatedEvent::TICKET_BOARD_CREATED, $event);
+        }catch (\Exception $exception){
+            // what ever that happened here we assume that you simply do not want to track notifications.
         }
 
         // Test Email Connector
@@ -224,8 +202,13 @@ class BoardService
      * @throws Exception
      */
     public function update(Board $board, $data = array(), $isPatch = false, $serialized = false, $formType = BoardType::class){
-        /** @var Smtp $smtpConfiguration */
-        $smtpConfiguration = $this->em->getRepository(Smtp::class)->findOneBy(['user' => $data['emailConnectorAccount']]);
+        // Validate Password
+        if(!array_key_exists("connectorPassword", $data)) {
+            $data["connectorPassword"] = $board->getConnectorPassword();
+        }
+        if(array_key_exists("connectorPassword", $data) && ($data["connectorPassword"] === null || $data["connectorPassword"] === '')) {
+            $data["connectorPassword"] = $board->getConnectorPassword();
+        }
         # -- form validation
         /** @var Form $form */
         $form = $this->container->get('form.factory')->create($formType, $board);
@@ -238,61 +221,22 @@ class BoardService
         // handling response
         $resources = $this->container->get('nti_ticket.resource.repository')->getResourcesByBoard($board);
         $eventResources = $this->container->get('nti_ticket.resource.repository')->getByUniqueIdCollection($board->getEventResources());
-        // If not exists SMTP Configuration
-        if ($smtpConfiguration == null) {
-            $smtpConfiguration = $this->em->getRepository(Smtp::class)->findOneBy([]);
-            // Form for SMTP Configuration.
-            $formTypeSmtp = SmtpType::class;
-            $dataSmtp = [
-                'host' => $board->getEmailConnectorServer(),
-                'port' => $smtpConfiguration->getPort(),
-                'encryption' => $smtpConfiguration->getEncryption(),
-                'user' => $board->getEmailConnectorAccount(),
-                'password' => $board->getEmailConnectorPassword(),
-            ];
-
-            $smtp = new Smtp();
-            $smtp->setUniqueId($board->getEmailConnectorAccount() . $this->ORGANIZATION_DOMAIN);
-            $smtp->setSpoolDir($this->APP_PATH_SPOOL . $board->getEmailConnectorAccount());
-
-            /** @var Form $formSmtp */
-            $formSmtp = $this->container->get('form.factory')->create($formTypeSmtp, $smtp);
-            $formSmtp->submit($dataSmtp);
-            if (!$formSmtp->isValid()) {
-                throw new InvalidFormException($form);
-            }
-
-            try {
-                $this->em->persist($smtp);
-            } catch (Exception $ex) {
-                throw new DatabaseException();
-            }
-        } else {
-            // If exists SMTP Configuration.
-            $formTypeSmtp = SmtpType::class;
-            $dataSmtp = [
-                'host' => $board->getEmailConnectorServer(),
-                'port' => $smtpConfiguration->getPort(),
-                'encryption' => $smtpConfiguration->getEncryption(),
-                'user' => $board->getEmailConnectorAccount(),
-                'password' => $board->getEmailConnectorPassword(),
-            ];
-
-            $smtpConfiguration->setUniqueId($board->getEmailConnectorAccount() . $this->ORGANIZATION_DOMAIN);
-            $smtpConfiguration->setSpoolDir($this->APP_PATH_SPOOL . $board->getEmailConnectorAccount());
-
-            /** @var Form $formSmtp */
-            $formSmtp = $this->container->get('form.factory')->create($formTypeSmtp, $smtpConfiguration);
-            $formSmtp->submit($dataSmtp);
-            if (!$formSmtp->isValid()) {
-                throw new InvalidFormException($form);
-            }
-        }
 
         try {
+            // Save board
             $this->em->flush();
         } catch (Exception $ex) {
             throw new DatabaseException();
+        }
+
+        /**
+         * Dispatching the created Ticket Event
+         */
+        try {
+            $event = new TicketBoardCreatedEvent($board);
+            $result = $this->dispatcher->dispatch(TicketBoardCreatedEvent::TICKET_BOARD_CREATED, $event);
+        }catch (\Exception $exception){
+            // what ever that happened here we assume that you simply do not want to track notifications.
         }
 
          // Test Email Connector
@@ -303,7 +247,6 @@ class BoardService
         }
 
         return $this->processBoard($board, $resources, $eventResources, $serialized);
-
     }
 
     /**
@@ -367,13 +310,6 @@ class BoardService
                     $this->em->remove($resource);
                 }
             }
-
         }
-
     }
-
-
-
-
-
 }

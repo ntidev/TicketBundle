@@ -119,28 +119,28 @@ class Board
      * @var string
      *
      * @Serializer\Groups({"nti_ticket_board"})
-     * @Serializer\SerializedName("emailConnectorServer")
-     * @ORM\Column(name="emailConnectorServer", type="string", length=255, nullable=true)
+     * @Serializer\SerializedName("connectorServer")
+     * @ORM\Column(name="connectorServer", type="string", length=255, nullable=true)
      */
-    private $emailConnectorServer;
+    private $connectorServer;
 
     /**
      * @var string
      *
-     * @Serializer\Groups({"nti_ticket_board"})
-     * @Serializer\SerializedName("emailConnectorAccount")
-     * @ORM\Column(name="emailConnectorAccount", type="string", length=255, nullable=true)
+     * @Serializer\Groups({"nti_ticket_board", "nti_ticket_board_list"})
+     * @Serializer\SerializedName("connectorAccount")
+     * @ORM\Column(name="connectorAccount", type="string", length=255, nullable=true)
      */
-    private $emailConnectorAccount;
+    private $connectorAccount;
 
     /**
      * @var string
      *
-     * @Serializer\Groups({"nti_ticket_board"})
-     * @Serializer\SerializedName("emailConnectorPassword")
-     * @ORM\Column(name="emailConnectorPassword", type="string", length=255, nullable=true)
+     * @Serializer\Groups({"nti_ticket_security"})
+     * @Serializer\SerializedName("connectorPassword")
+     * @ORM\Column(name="connectorPassword", type="string", length=255, nullable=true)
      */
-    private $emailConnectorPassword;
+    private $connectorPassword;
 
     public function __construct()
     {
@@ -386,54 +386,54 @@ class Board
     /**
      * @return string
      */
-    public function getEmailConnectorServer()
+    public function getConnectorServer()
     {
-        return $this->emailConnectorServer;
+        return $this->connectorServer;
     }
 
     /**
-     * @param string $emailConnectorServer
+     * @param string $connectorServer
      * @return Board
      */
-    public function setEmailConnectorServer(string $emailConnectorServer)
+    public function setConnectorServer(string $connectorServer)
     {
-        $this->emailConnectorServer = $emailConnectorServer;
+        $this->connectorServer = $connectorServer;
         return $this;
     }
 
     /**
      * @return string
      */
-    public function getEmailConnectorAccount()
+    public function getConnectorAccount()
     {
-        return $this->emailConnectorAccount;
+        return $this->connectorAccount;
     }
 
     /**
-     * @param string $emailConnectorAccount
+     * @param string $connectorAccount
      * @return Board
      */
-    public function setEmailConnectorAccount(string $emailConnectorAccount)
+    public function setConnectorAccount(string $connectorAccount)
     {
-        $this->emailConnectorAccount = $emailConnectorAccount;
+        $this->connectorAccount = $connectorAccount;
         return $this;
     }
 
     /**
      * @return string
      */
-    public function getEmailConnectorPassword()
+    public function getConnectorPassword()
     {
-        return $this->emailConnectorPassword;
+        return $this->connectorPassword;
     }
 
     /**
-     * @param string $emailConnectorPassword
+     * @param string $connectorPassword
      * @return Board
      */
-    public function setEmailConnectorPassword(string $emailConnectorPassword)
+    public function setConnectorPassword(string $connectorPassword)
     {
-        $this->emailConnectorPassword = $emailConnectorPassword;
+        $this->connectorPassword = $connectorPassword;
         return $this;
     }
 }

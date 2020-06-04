@@ -95,7 +95,7 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
 
         foreach ($boards as $board) {
 
-            if ($board->getEmailConnectorServer() != null && $board->getEmailConnectorAccount() != null && $board->getEmailConnectorPassword()) {
+            if ($board->getConnectorServer() != null && $board->getConnectorAccount() != null && $board->getConnectorPassword() && $board->getIsActive()) {
                 /**
                  * parameters validation and connection test.
                  */
@@ -103,11 +103,11 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                     $this->container->get('nti_ticket.connector.exchange.service')->testConnection($board);
                 } catch (\Exception $exception) {
                     if ($exception instanceof ExchangeServerInvalidException) {
-                        $this->logger->alert("NTI Ticket: {$exception->getMessage()}" . $board->getEmailConnectorAccount());
+                        $this->logger->alert("NTI Ticket: {$exception->getMessage()}" . $board->getConnectorAccount());
                     } elseif ($exception instanceof ExchangeConnectionFailedException) {
-                        $this->logger->alert("NTI Ticket: {$exception->getMessage()}" . $board->getEmailConnectorAccount());
+                        $this->logger->alert("NTI Ticket: {$exception->getMessage()}" . $board->getConnectorAccount());
                     } elseif ($exception instanceof ExchangeInactiveConfigurationException) {
-                        $this->logger->alert("NTI Ticket: {$exception->getMessage()}" . $board->getEmailConnectorAccount());
+                        $this->logger->alert("NTI Ticket: {$exception->getMessage()}" . $board->getConnectorAccount());
                     } else {
                         $this->logger->alert(self::ERROR_UNKNOWN, array('message' => $exception->getMessage()));
                     }
@@ -115,7 +115,7 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                 }
 
                 $this->api = $this->container->get('nti_ticket.connector.exchange.service')->getConnection();
-                $this->logger->alert("NTI Ticket: {$board->getEmailConnectorAccount()}");
+                $this->logger->alert("NTI Ticket: {$board->getConnectorAccount()}");
 
                 /**
                  * Inbox directory
@@ -135,7 +135,7 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                  */
                 $processedDir = $this->api->getFolderByDisplayName('processed', $inboxId);
                 if (!$processedDir) {
-                    $this->logger->error('NTI Ticket: No inbox processed directory found. ' . $board->getEmailConnectorAccount());
+                    $this->logger->error('NTI Ticket: No inbox processed directory found. ' . $board->getConnectorAccount());
                     continue;
                 }
 
@@ -179,9 +179,7 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
             }
         }
 
-
         $output->writeln('NTI Ticket: Synchronization completed.');
-
     }
 
     /**
@@ -210,6 +208,7 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                 $email->setMessage($item);
 
                 $ticket = $this->container->get('nti_ticket.service')->newEmailReceived($email, $board);
+
             } catch (\Exception $exception) {
                 if ($exception instanceof InvalidFormException) {
                     $this->logger->critical("NTI Tickets: Form errors.", RestResponse::getFormErrors($exception->getForm()));
@@ -250,9 +249,9 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                 # -- Get posted information
                 $name = $start->format('Y-m-d') . "_" . ($item->getSubject() != null ? Utilities::normalizeString($item->getSubject()) : "No_Subject_Found") . ".eml";;
                 $fileName = $path . '/' . $name;
+
                 # -- filename config
                 $hash = sha1("1" . time() . $fileName);
-//                $fileName = $hash . "_" . $fileName;
 
                 // Prepare upload folder
                 if (!file_exists($path)) {
@@ -306,7 +305,6 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
 
     public function rmdir_recursive($path, $output)
     {
-        dump("PATH " . $path . "\n");
         foreach (scandir($path) as $file) {
             if ('.' === $file || '..' === $file) continue;
             if (is_dir("$path/$file")) $this->rmdir_recursive("$path/$file", $output);
@@ -318,5 +316,13 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
             $output->writeln("The directory couldn't be removed.");
         };
     }
+
+    public function getTicketNumberFromEmailSubject($subject) {
+        $subject = $subject;
+        $startStr = strpos($subject, '[#');
+        $string = substr($subject,$startStr+2, strlen($subject));
+        return strtok($string, ']');
+    }
+
 
 }
