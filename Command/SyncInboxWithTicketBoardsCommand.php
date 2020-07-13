@@ -12,6 +12,7 @@ use garethp\ews\API\Type\FolderIdType;
 use garethp\ews\API\Type\MessageType;
 use garethp\ews\API\Type\SyncFolderItemsCreateOrUpdateType;
 use Monolog\Logger;
+use NTI\TicketBundle\Entity\Configuration\Configuration;
 use NTI\TicketBundle\Entity\Board\Board;
 use NTI\TicketBundle\Entity\Ticket\Document;
 use NTI\TicketBundle\Entity\Ticket\Ticket;
@@ -45,7 +46,6 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
     CONST ERROR_INVALID_CREDENTIALS = "NTI Ticket: Invalid credentials.";
     CONST ERROR_UNKNOWN = "NTI Ticket: Unknown error.";
 
-
     CONST URI_HTTPS = "https://";
     CONST URI_BODY = "/EWS/Exchange.asmx";
 
@@ -64,6 +64,8 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
     private $minDate;
 
     private $MIN_DATE;
+
+    private $blackListEmail;
 
     protected function configure()
     {
@@ -89,12 +91,16 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
 
         # entity manager service.
         $this->em = $this->getContainer()->get('doctrine')->getManager();
+
+        /**@var Configuration $config */
+        $config = $this->em->getRepository(Configuration::class)->findOneBy(["name" => "EXCHANGE_EMAIL_CAN_NOT_BE_PROCESSED"]);
+        $this->blackListEmail = $config->getValue();
+
         # getting active boards with exchange credentials set from the db
         /**@var Board $board */
         $boards = $this->em->getRepository(Board::class)->findAll();
 
         foreach ($boards as $board) {
-
             if ($board->getConnectorServer() != null && $board->getConnectorAccount() != null && $board->getConnectorPassword() && $board->getIsActive()) {
                 /**
                  * parameters validation and connection test.
@@ -134,8 +140,9 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                  * The processed emails will be moved to this directory.
                  */
                 $processedDir = $this->api->getFolderByDisplayName('processed', $inboxId);
-                if (!$processedDir) {
-                    $this->logger->error('NTI Ticket: No inbox processed directory found. ' . $board->getConnectorAccount());
+                $noProcessedDir = $this->api->getFolderByDisplayName('no_processed', $inboxId);
+                if (!$processedDir || !$noProcessedDir) {
+                    $this->logger->error('NTI Ticket: No inbox processed or no_processed directory found. ' . $board->getConnectorAccount());
                     continue;
                 }
 
@@ -146,6 +153,7 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                 $maxEntries = 500;
                 $syncString = null;
                 $processedId = $processedDir->getFolderId();
+                $noProcessedId = $noProcessedDir->getFolderId();
 
                 do {
                     /** @var SyncFolderItemsResponseMessageType $changes */
@@ -159,10 +167,9 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
 
                     # -- we're good to go!! Applying best programming skills
                     if ($created instanceof SyncFolderItemsCreateOrUpdateType) { # -- found just one item in the folder
+                        # -- if message is null is not a email item type (can be calendar meeting response, request or something)
                         if (null != $message = $created->getMessage()) {
-                            # -- if message is null is not a email item type (can be calendar meeting response, request or something)
-                            $this->sendEmailToProcess($message, $processedId, $board, $output);
-
+                            $this->sendEmailToProcess($message, $processedId, $noProcessedId, $board, $output);
                         }
                     } elseif (is_array($created)) { # -- found more than one item in the folder
                         /** @var SyncFolderItemsCreateOrUpdateType $itemReceived */
@@ -171,7 +178,7 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                                 # -- if message is null is not a email item type (can be calendar meeting response, request or something)
                                 continue;
                             }
-                            $this->sendEmailToProcess($message, $processedId, $board, $output);
+                            $this->sendEmailToProcess($message, $processedId, $noProcessedId, $board, $output);
                         }
                     }
 
@@ -185,19 +192,20 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
     /**
      * @param MessageType $message
      * @param FolderIdType $processedId
+     * @param FolderIdType $noProcessedId
      * @param Board $board
      * @return bool
      */
-    private function sendEmailToProcess(MessageType $message, FolderIdType $processedId, Board $board, OutputInterface $output)
+    private function sendEmailToProcess(MessageType $message, FolderIdType $processedId, FolderIdType $noProcessedId, Board $board, OutputInterface $output)
     {
         /** @var MessageType $item */
         $item = $this->api->getItem($message->getItemId(), ['ItemShape' => array('IncludeMimeContent' => true, 'BodyType' => BodyTypeResponseType::TEXT)]);
         $start = (new \DateTime($item->getDateTimeSent()))->setTimezone(new \DateTimeZone(date_default_timezone_get()));
+        $from = $item->getFrom()->getMailbox()->getEmailAddress();
 
-        if($start >= $this->minDate) {
+        if($start >= $this->minDate && $this->canAccountEmailBeProcessed($board, $from)) {
             try {
                 // full email
-                $from = $item->getFrom()->getMailbox()->getEmailAddress();
                 $body = $item->getBody();
                 $subject = $item->getSubject();
 
@@ -207,8 +215,8 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                 $email->setSubject($subject);
                 $email->setMessage($item);
 
+                // Create Ticket and Send Notification
                 $ticket = $this->container->get('nti_ticket.service')->newEmailReceived($email, $board);
-
             } catch (\Exception $exception) {
                 if ($exception instanceof InvalidFormException) {
                     $this->logger->critical("NTI Tickets: Form errors.", RestResponse::getFormErrors($exception->getForm()));
@@ -217,6 +225,17 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                 } elseif ($exception instanceof TicketProcessStoppedException) {
                     $process = $exception->getProcess();
                     $this->logger->critical("NTI Tickets: Process stopped by the user.", $process->getErrors());
+                }
+
+                /**
+                 * Moving email to the no_processed folder.
+                 */
+                try {
+                    $this->api->moveItem($message->getItemId(), $noProcessedId);
+                    $this->logger->debug('NTI Tickets: Email moved to no_processed folder. Reason: ' . json_encode($exception));
+                } catch (\Exception $ex) {
+                    $this->logger->critical("NTI Tickets: Error moving the email to the no_processed folder:: ", $ex->getMessage());
+                    return false;
                 }
 
                 $this->logger->critical("NTI Tickets: Unknown error:: " . $exception->getMessage());
@@ -231,6 +250,10 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                 if($ticket instanceof Ticket) {
                     $this->api->moveItem($message->getItemId(), $processedId);
                     $this->logger->debug('NTI Tickets: Email moved to processed folder.');
+                }
+                else {
+                    $this->api->moveItem($message->getItemId(), $noProcessedId);
+                    $this->logger->critical('NTI Tickets: Email moved to no_processed folder.');
                 }
             } catch (\Exception $exception) {
                 $this->logger->critical("NTI Tickets: Error moving the email to the processed folder:: ", $exception->getMessage());
@@ -324,5 +347,27 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
         return strtok($string, ']');
     }
 
+    /**
+     * @description Check if the email to be processed is a board account, if true the return false to not be processed
+     * @example if receives email is email@unitex.com and in the board list [email@unitex.com] exists that email
+     * @param Board $board
+     * @param $email
+     * @return boolean
+     */
+    public function canAccountEmailBeProcessed(Board $board, $email) {
+        # entity manager service.
+//        $this->em = $this->getContainer()->get('doctrine')->getManager();
+        $boardAccount = $board->getConnectorAccount();
+
+        // Set emails string to array
+        $email_arr = preg_split ("/\,/", $this->blackListEmail);
+        $isEmailForbidden = false;
+        // Check if is an array type
+        if(is_array($email_arr)) {
+            $isEmailForbidden = in_array($email, $email_arr);
+        }
+
+        return $boardAccount != $email && !$isEmailForbidden;
+    }
 
 }
