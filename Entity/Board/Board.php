@@ -120,7 +120,7 @@ class Board
      *
      * @Serializer\Groups({"nti_ticket_board"})
      * @Serializer\SerializedName("connectorServer")
-     * @ORM\Column(name="connectorServer", type="string", length=255, nullable=true)
+     * @ORM\Column(name="connector_server", type="string", length=255, nullable=true)
      */
     private $connectorServer;
 
@@ -129,7 +129,7 @@ class Board
      *
      * @Serializer\Groups({"nti_ticket_board", "nti_ticket_board_list"})
      * @Serializer\SerializedName("connectorAccount")
-     * @ORM\Column(name="connectorAccount", type="string", length=255, nullable=true)
+     * @ORM\Column(name="connector_account", type="string", length=255, nullable=true)
      */
     private $connectorAccount;
 
@@ -138,9 +138,18 @@ class Board
      *
      * @Serializer\Groups({"nti_ticket_security"})
      * @Serializer\SerializedName("connectorPassword")
-     * @ORM\Column(name="connectorPassword", type="string", length=255, nullable=true)
+     * @ORM\Column(name="connector_password", type="string", length=255, nullable=true)
      */
     private $connectorPassword;
+
+    /**
+     * @var bool
+     *
+     * @Serializer\Groups({"nti_ticket_board", "nti_ticket_board_list"})
+     * @Serializer\SerializedName("connectionStatus")
+     * @ORM\Column(name="connection_status", type="boolean", options={"default": false})
+     */
+    private $connectionStatus;
 
     public function __construct()
     {
@@ -435,5 +444,21 @@ class Board
     {
         $this->connectorPassword = $connectorPassword;
         return $this;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isConnectionStatus()
+    {
+        return $this->connectionStatus;
+    }
+
+    /**
+     * @param bool $connectionStatus
+     */
+    public function setConnectionStatus(bool $connectionStatus)
+    {
+        $this->connectionStatus = $connectionStatus;
     }
 }
