@@ -67,6 +67,9 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
 
     private $blackListEmail;
 
+    /** @var OutputInterface $output */
+    private $output;
+
     protected function configure()
     {
         $this
@@ -85,6 +88,7 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
         # -- assigning global variable scope
         $this->container = $this->getContainer();
         $this->logger = $this->container->get('logger');
+        $this->output = $output;
 
         $this->MIN_DATE = $this->getContainer()->getParameter('app.date.sync.inbox');
         $this->minDate = (new \DateTime('00:00:00'))->modify('-'. $this->MIN_DATE . ' day');
@@ -140,8 +144,8 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                  * The processed emails will be moved to this directory.
                  */
                 $processedDir = $this->api->getFolderByDisplayName('processed', $inboxId);
-                $noProcessedDir = $this->api->getFolderByDisplayName('no_processed', $inboxId);
-                if (!$processedDir || !$noProcessedDir) {
+                $notProcessedDir = $this->api->getFolderByDisplayName('not_processed', $inboxId);
+                if (!$processedDir || !$notProcessedDir) {
                     $this->logger->error('NTI Ticket: No inbox processed or no_processed directory found. ' . $board->getConnectorAccount());
                     continue;
                 }
@@ -153,7 +157,7 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                 $maxEntries = 500;
                 $syncString = null;
                 $processedId = $processedDir->getFolderId();
-                $noProcessedId = $noProcessedDir->getFolderId();
+                $notProcessedId = $notProcessedDir->getFolderId();
 
                 do {
                     /** @var SyncFolderItemsResponseMessageType $changes */
@@ -169,7 +173,7 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                     if ($created instanceof SyncFolderItemsCreateOrUpdateType) { # -- found just one item in the folder
                         # -- if message is null is not a email item type (can be calendar meeting response, request or something)
                         if (null != $message = $created->getMessage()) {
-                            $this->sendEmailToProcess($message, $processedId, $noProcessedId, $board, $output);
+                            $this->sendEmailToProcess($message, $processedId, $notProcessedId, $board);
                         }
                     } elseif (is_array($created)) { # -- found more than one item in the folder
                         /** @var SyncFolderItemsCreateOrUpdateType $itemReceived */
@@ -178,7 +182,7 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                                 # -- if message is null is not a email item type (can be calendar meeting response, request or something)
                                 continue;
                             }
-                            $this->sendEmailToProcess($message, $processedId, $noProcessedId, $board, $output);
+                            $this->sendEmailToProcess($message, $processedId, $notProcessedId, $board);
                         }
                     }
 
@@ -192,11 +196,11 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
     /**
      * @param MessageType $message
      * @param FolderIdType $processedId
-     * @param FolderIdType $noProcessedId
+     * @param FolderIdType $notProcessedId
      * @param Board $board
      * @return bool
      */
-    private function sendEmailToProcess(MessageType $message, FolderIdType $processedId, FolderIdType $noProcessedId, Board $board, OutputInterface $output)
+    private function sendEmailToProcess(MessageType $message, FolderIdType $processedId, FolderIdType $notProcessedId, Board $board)
     {
         /** @var MessageType $item */
         $item = $this->api->getItem($message->getItemId(), ['ItemShape' => array('IncludeMimeContent' => true, 'BodyType' => BodyTypeResponseType::TEXT)]);
@@ -217,7 +221,10 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
 
                 // Create Ticket and Send Notification
                 $ticket = $this->container->get('nti_ticket.service')->newEmailReceived($email, $board);
+                $this->uploadDocument($ticket, $item, $start);
             } catch (\Exception $exception) {
+                dump($exception->getMessage());die;
+
                 if ($exception instanceof InvalidFormException) {
                     $this->logger->critical("NTI Tickets: Form errors.", RestResponse::getFormErrors($exception->getForm()));
                 } elseif ($exception instanceof DatabaseException) {
@@ -231,7 +238,7 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                  * Moving email to the no_processed folder.
                  */
                 try {
-                    $this->api->moveItem($message->getItemId(), $noProcessedId);
+                    $this->api->moveItem($message->getItemId(), $notProcessedId);
                     $this->logger->debug('NTI Tickets: Email moved to no_processed folder. Reason: ' . json_encode($exception));
                 } catch (\Exception $ex) {
                     $this->logger->critical("NTI Tickets: Error moving the email to the no_processed folder:: ", $ex->getMessage());
@@ -252,7 +259,7 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                     $this->logger->debug('NTI Tickets: Email moved to processed folder.');
                 }
                 else {
-                    $this->api->moveItem($message->getItemId(), $noProcessedId);
+                    $this->api->moveItem($message->getItemId(), $notProcessedId);
                     $this->logger->critical('NTI Tickets: Email moved to no_processed folder.');
                 }
             } catch (\Exception $exception) {
@@ -264,79 +271,84 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
              * Create Document
              */
             if($ticket instanceof Ticket) {
-                # -- dependencies
-                $validFormats = Document::ALLOWED_FORMATS;
-                $directory = $this->container->getParameter('nti_ticket.documents.dir');
-                $path = $directory . "/" . $ticket->getId();
 
-                # -- Get posted information
-                $name = $start->format('Y-m-d') . "_" . ($item->getSubject() != null ? Utilities::normalizeString($item->getSubject()) : "No_Subject_Found") . ".eml";;
-                $fileName = $path . '/' . $name;
-
-                # -- filename config
-                $hash = sha1("1" . time() . $fileName);
-
-                // Prepare upload folder
-                if (!file_exists($path)) {
-                    if (!mkdir($path, 0777, true)) {
-                        $this->logger->critical("Unable to create or write in the upload directory provided.");
-                        throw new \Exception("Unable to create or write in the upload directory provided.");
-                    }
-                }
-
-                // Write the content to the file (replace if exists)
-                if (file_put_contents($fileName, base64_decode($item->getMimeContent()->_)) === false) { # -- could not create the file.
-                    $this->logger->critical("The EML file could not be created.");
-                    throw new \Exception("The EML file could not be created.");
-                    $output->writeln('The EML file could not be created');
-                    return false;
-                }
-
-                $size = filesize($path);
-
-                try {
-                    # -- adding document to the ticket
-                    $document = new Document();
-                    $document->setTicket($ticket);
-                    $document->setDirectory($ticket->getId());
-                    $document->setFileName($name);
-                    $document->setFormat("EML");
-                    $document->setHash($hash);
-                    $document->setName($name);
-                    $document->setPath($path);
-                    $document->setType("message/rfc822");
-                    $document->setSize($size);
-                    $document->setUploadDate(new \DateTime());
-                    $document->setResource(TicketResource::EMAIL_RESOURCE);
-
-                    $this->em->persist($document);
-                    $this->em->flush();
-                } catch (NotNullConstraintViolationException $exception) {
-                    $this->rmdir_recursive($path, $output);
-                    $this->logger->critical("NTI Tickets: An error has occurred creating the document." . $exception->getMessage());
-                    throw new \Exception("NTI Tickets: An error has occurred creating the document." . $exception->getMessage());
-                } catch (Exception $exception) {
-                    $this->rmdir_recursive($path, $output);
-                    $this->logger->critical("NTI Tickets: An error has occurred creating the document." . $exception->getMessage());
-                    throw new \Exception("NTI Tickets: An error has occurred creating the document." . $exception->getMessage());
-                }
             }
         }
 
         return true;
     }
 
-    public function rmdir_recursive($path, $output)
+    public function uploadDocument(Ticket $ticket, $item, \DateTime $date) {
+        # -- dependencies
+        $validFormats = Document::ALLOWED_FORMATS;
+        $directory = $this->container->getParameter('nti_ticket.documents.dir');
+        $path = $directory . "/" . $ticket->getId();
+
+        # -- Get posted information
+        $name = $date->format('Y-m-d') . "_" . ($item->getSubject() != null ? Utilities::normalizeString($item->getSubject()) : "No_Subject_Found") . ".eml";;
+        $fileName = $path . '/' . $name;
+
+        # -- filename config
+        $hash = sha1("1" . time() . $fileName);
+
+        // Prepare upload folder
+        if (!file_exists($path)) {
+            if (!mkdir($path, 0777, true)) {
+                $this->logger->critical("Unable to create or write in the upload directory provided.");
+                throw new \Exception("Unable to create or write in the upload directory provided.");
+            }
+        }
+
+        // Write the content to the file (replace if exists)
+        if (file_put_contents($fileName, base64_decode($item->getMimeContent()->_)) === false) { # -- could not create the file.
+            $this->logger->critical("The EML file could not be created.");
+            throw new \Exception("The EML file could not be created.");
+            $this->output->writeln('The EML file could not be created');
+            return false;
+        }
+
+        $size = filesize($path);
+
+        try {
+            # -- adding document to the ticket
+            $document = new Document();
+            $document->setTicket($ticket);
+            $document->setDirectory($ticket->getId());
+            $document->setFileName($name);
+            $document->setFormat("EML");
+            $document->setHash($hash);
+            $document->setName($name);
+            $document->setPath($path);
+            $document->setType("message/rfc822");
+            $document->setSize($size);
+            $document->setUploadDate(new \DateTime());
+            $document->setResource(TicketResource::EMAIL_RESOURCE);
+
+            $this->em->persist($document);
+            $this->em->flush();
+            return $document;
+        } catch (NotNullConstraintViolationException $exception) {
+            $this->rmdir_recursive($path, $output);
+            $this->logger->critical("NTI Tickets: An error has occurred creating the document." . $exception->getMessage());
+            throw new \Exception("NTI Tickets: An error has occurred creating the document." . $exception->getMessage());
+        } catch (Exception $exception) {
+            $this->rmdir_recursive($path, $output);
+            $this->logger->critical("NTI Tickets: An error has occurred creating the document." . $exception->getMessage());
+            throw new \Exception("NTI Tickets: An error has occurred creating the document." . $exception->getMessage());
+        }
+    }
+
+    public function rmdir_recursive($path)
     {
         foreach (scandir($path) as $file) {
             if ('.' === $file || '..' === $file) continue;
-            if (is_dir("$path/$file")) $this->rmdir_recursive("$path/$file", $output);
+            if (is_dir("$path/$file")) $this->rmdir_recursive("$path/$file");
             else unlink("$path/$file");
         }
         if (rmdir($path)) {
-            $output->writeln("The directory was removed.");
+            $this->output->writeln("The directory was removed.");
         } else {
-            $output->writeln("The directory couldn't be removed.");
+            $this->output->writeln("The directory couldn't be removed.");
         };
     }
 
