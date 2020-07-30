@@ -266,13 +266,6 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                 $this->logger->critical("NTI Tickets: Error moving the email to the processed folder:: ", $exception->getMessage());
                 return false;
             }
-
-            /**
-             * Create Document
-             */
-            if($ticket instanceof Ticket) {
-
-            }
         }
 
         return true;
