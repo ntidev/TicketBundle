@@ -179,10 +179,23 @@ class BoardService
         }
 
         // Test Email Connector
+        $connectionExecption = null;
         try {
             $this->testConnectionService($board);
+            $board->setConnectionStatus(true);
         } catch (\Exception $exception) {
-            throw $exception;
+            $board->setConnectionStatus(false);
+            $connectionExecption = $exception;
+        }
+
+        try {
+            // Save board
+            $this->em->flush();
+        } catch (Exception $ex) {
+            throw new DatabaseException();
+        }
+        if($connectionExecption) {
+            throw $connectionExecption;
         }
 
         return $this->processBoard($board, $resources, $eventResources, $serialized);

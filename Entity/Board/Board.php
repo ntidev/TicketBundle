@@ -147,7 +147,7 @@ class Board
      *
      * @Serializer\Groups({"nti_ticket_board", "nti_ticket_board_list"})
      * @Serializer\SerializedName("connectionStatus")
-     * @ORM\Column(name="connection_status", type="boolean", options={"default": false})
+     * @ORM\Column(name="connection_status", type="boolean", options={"default": 0}, nullable=true)
      */
     private $connectionStatus;
 
