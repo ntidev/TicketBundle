@@ -56,7 +56,7 @@ class TicketService extends SettingService
         $nextByConfig = 0;
 
         // last ticket registered
-        $lastTicket = $this->em->getRepository(Ticket::class)->findOneBy(array(), array('ticketNumber' => 'desc'));
+        $lastTicket = $this->em->getRepository(Ticket::class)->findOneBy(array(), array('id' => 'desc'));
 
         // -- check if the next number was changed.
         $config = $this->em->getRepository(Configuration::class)->findOneBy(array('name' => 'NEXT_TICKET_NUMBER'));

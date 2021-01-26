@@ -221,7 +221,9 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
 
                 // Create Ticket and Send Notification
                 $ticket = $this->container->get('nti_ticket.service')->newEmailReceived($email, $board);
-                $this->uploadDocument($ticket, $item, $start);
+                if ($ticket instanceof Ticket) {
+                    $this->uploadDocument($ticket, $item, $start);
+                }
             } catch (\Exception $exception) {
                 dump($exception->getMessage());die;
 
