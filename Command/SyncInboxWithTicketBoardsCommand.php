@@ -113,19 +113,19 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                     $this->container->get('nti_ticket.connector.exchange.service')->testConnection($board);
                 } catch (\Exception $exception) {
                     if ($exception instanceof ExchangeServerInvalidException) {
-                        $this->logger->alert("NTI Ticket: {$exception->getMessage()}" . $board->getConnectorAccount());
+                        $this->logger->error("NTI Ticket: {$exception->getMessage()}" . $board->getConnectorAccount());
                     } elseif ($exception instanceof ExchangeConnectionFailedException) {
-                        $this->logger->alert("NTI Ticket: {$exception->getMessage()}" . $board->getConnectorAccount());
+                        $this->logger->error("NTI Ticket: {$exception->getMessage()}" . $board->getConnectorAccount());
                     } elseif ($exception instanceof ExchangeInactiveConfigurationException) {
-                        $this->logger->alert("NTI Ticket: {$exception->getMessage()}" . $board->getConnectorAccount());
+                        $this->logger->error("NTI Ticket: {$exception->getMessage()}" . $board->getConnectorAccount());
                     } else {
-                        $this->logger->alert(self::ERROR_UNKNOWN, array('message' => $exception->getMessage()));
+                        $this->logger->error(self::ERROR_UNKNOWN, array('message' => $exception->getMessage()));
                     }
                     continue; // Remove this die to allow that command continues with others board
                 }
 
                 $this->api = $this->container->get('nti_ticket.connector.exchange.service')->getConnection();
-                $this->logger->alert("NTI Ticket: {$board->getConnectorAccount()}");
+                $this->logger->info("NTI Ticket: {$board->getConnectorAccount()}");
 
                 /**
                  * Inbox directory
@@ -135,7 +135,7 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                     $inboxId = $this->api->getFolderByDistinguishedId(DistinguishedFolderIdNameType::INBOX)->getFolderId();
                 } catch (\Exception $exception) {
                     // -- general error handler
-                    $this->logger->alert(self::ERROR_UNKNOWN, array('message' => $exception->getMessage()));
+                    $this->logger->error(self::ERROR_UNKNOWN, array('message' => $exception->getMessage()));
                     continue;
                 }
 
@@ -225,15 +225,13 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                     $this->uploadDocument($ticket, $item, $start);
                 }
             } catch (\Exception $exception) {
-                dump($exception->getMessage());die;
-
                 if ($exception instanceof InvalidFormException) {
-                    $this->logger->critical("NTI Tickets: Form errors.", RestResponse::getFormErrors($exception->getForm()));
+                    $this->logger->error("NTI Tickets: Form errors.", RestResponse::getFormErrors($exception->getForm()));
                 } elseif ($exception instanceof DatabaseException) {
-                    $this->logger->critical("NTI Tickets: Database error:: " . $exception->getMessage());
+                    $this->logger->error("NTI Tickets: Database error:: " . $exception->getMessage());
                 } elseif ($exception instanceof TicketProcessStoppedException) {
                     $process = $exception->getProcess();
-                    $this->logger->critical("NTI Tickets: Process stopped by the user.", $process->getErrors());
+                    $this->logger->error("NTI Tickets: Process stopped by the user.", $process->getErrors());
                 }
 
                 /**
@@ -243,11 +241,11 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                     $this->api->moveItem($message->getItemId(), $notProcessedId);
                     $this->logger->debug('NTI Tickets: Email moved to no_processed folder. Reason: ' . json_encode($exception));
                 } catch (\Exception $ex) {
-                    $this->logger->critical("NTI Tickets: Error moving the email to the no_processed folder:: ", $ex->getMessage());
+                    $this->logger->error("NTI Tickets: Error moving the email to the no_processed folder:: ", $ex->getMessage());
                     return false;
                 }
 
-                $this->logger->critical("NTI Tickets: Unknown error:: " . $exception->getMessage());
+                $this->logger->error("NTI Tickets: Unknown error:: " . $exception->getMessage());
 
                 return false;
             }
@@ -262,10 +260,10 @@ class SyncInboxWithTicketBoardsCommand extends ContainerAwareCommand
                 }
                 else {
                     $this->api->moveItem($message->getItemId(), $notProcessedId);
-                    $this->logger->critical('NTI Tickets: Email moved to no_processed folder.');
+                    $this->logger->debug('NTI Tickets: Email moved to no_processed folder.');
                 }
             } catch (\Exception $exception) {
-                $this->logger->critical("NTI Tickets: Error moving the email to the processed folder:: ", $exception->getMessage());
+                $this->logger->error("NTI Tickets: Error moving the email to the processed folder:: ", $exception->getMessage());
                 return false;
             }
         }
