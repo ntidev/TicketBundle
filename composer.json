@@ -22,7 +22,7 @@
     "target-dir" : "NTI/TicketBundle",
     "require": {
         "php": ">=7.0",
-        "symfony/symfony": "3.4.20",
+        "symfony/symfony": "3.4.*",
         "doctrine/orm": "^2.5",
         "doctrine/doctrine-bundle": "^1.6",
         "symfony/monolog-bundle": "3.1.0",
